@@ -21,25 +21,12 @@ end
 dims_stat = size(stat);
 n_perms = size(null_stat,1);
 
-% detect whether the statistics is above or below
-% the median of the null
-% above: 1
-% below: -1
-above_or_below_null = ...
-    sign(stat - reshape(median(null_stat), dims_stat));
-
 % replicate stat over the permuted dimension
 stat_rep = repmat( shiftdim(stat, -1),  [n_perms, ones(1,ndims(stat))]);
 
 % calculate two-tailed p-value
-if above_or_below_null == 1
-    p = 2 * mean(null_stat > stat_rep);
-elseif above_or_below_null == -1
-    p = 2 * mean(null_stat < stat_rep);
-else
-    error('above_or_below_null must be 1 or -1, not %d', above_or_below_null);
-end
-    
+p = min(mean(null_stat > stat_rep), mean(null_stat < stat_rep)) * 2;
+
 % remove singleton dimension
 p = reshape(p, dims_stat);
 
@@ -47,5 +34,6 @@ p = reshape(p, dims_stat);
 p(p==0) = 1/n_perms;
 
 % convert to signed -log10[p]
+above_or_below_null = sign(stat - squeeze_dims(median(null_stat),1));
 signed_log10p = above_or_below_null .* -log10(p);
 
