@@ -1,7 +1,9 @@
+schalk_subjid = 'AMC045';
+matfile_gamma_envelopes = gamma_stimulus_responses(schalk_subjid);
+X = load(matfile_gamma_envelopes);
+D = X.gamma_stimulus_response;
+t = X.gamma_stimulus_response_t;
+clear matfile_gamma_envelopes X;
 
-
-N = 1e3;
-sample_size = 10;
-P = 5;
-X = randn(N, P) + ones(N,1)*randn(1,P)*2;
-anova_from_bootstrap_1way(X, median(var(X,[],2)))
+%%
+size(D)

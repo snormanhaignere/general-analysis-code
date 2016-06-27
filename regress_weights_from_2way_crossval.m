@@ -1,8 +1,8 @@
 function [B, best_K, mse, r, mse_bestK] = ...
-    regress_weights_from_2way_crossval(F, y, n_folds, method, K, varargin)
+    regress_weights_from_2way_crossval(F, y, folds, method, K, varargin)
 
 % [B, best_K, mse, r] = ...
-%     regress_weights_from_2way_crossval(F, y, n_folds, method, K, varargin)
+%     regress_weights_from_2way_crossval(F, y, folds, method, K, varargin)
 % 
 % Estimates regression using N-fold cross-validation. Available methods include
 % 'ridge', 'pls', and 'lasso'. The set of regularization parameters K 
@@ -20,9 +20,9 @@ function [B, best_K, mse, r, mse_bestK] = ...
 % y = F * w + sig * randn(N,1);
 % 
 % % least-squares weights
-% n_folds = 10;
+% folds = 10;
 % [b, ~, ls_mse] = ...
-%     regress_weights_from_2way_crossval(F, y, n_folds, 'least-squares');
+%     regress_weights_from_2way_crossval(F, y, folds, 'least-squares');
 % 
 % % plot least-squares weights
 % b = pinv([ones(N,1), F]) * y;
@@ -50,9 +50,9 @@ function [B, best_K, mse, r, mse_bestK] = ...
 %     end
 % 
 %     % 10-fold ridge regression
-%     n_folds = 10;
+%     folds = 10;
 %     [b, best_K, mse] = ...
-%         regress_weights_from_2way_crossval(F, y, n_folds, methods{i}, K);
+%         regress_weights_from_2way_crossval(F, y, folds, methods{i}, K);
 %     
 %     % plot weights
 %     figure;
@@ -90,7 +90,7 @@ assert(iscolumn(y) && length(y) == N);
 
 % number of folds
 if nargin < 3
-    n_folds = N;
+    folds = N;
 end
 
 % ridge is the default method
@@ -112,11 +112,18 @@ if nargin < 5
         otherwise
             error('No valid method for %s\n', method);
     end
-end
+end    
 
-% divide features and data into folds
-F_folds = create_folds(F, n_folds);
-y_folds = create_folds(y, n_folds);
+if isscalar(folds)
+    n_folds = folds;
+    fold_indices = subdivide(N, folds);
+    clear folds;
+else
+    assert(isvector(folds));
+    [~,~,fold_indices] = unique(folds(:));
+    n_folds = max(fold_indices);
+    clear folds;
+end
 
 % number of components to test
 n_K = length(K);
@@ -127,26 +134,27 @@ r = nan(n_folds, max(n_K,1));
 for test_fold = 1:n_folds
         
     % train and testing folds
-    train_folds = setdiff(1:n_folds, test_fold);
+    test_fold_indices = fold_indices == test_fold;
+    train_fold_indices = ~test_fold_indices;
     
     % concatenate training data
-    F_train = cat(1, F_folds{train_folds});
-    y_train = cat(1, y_folds{train_folds});
+    F_train = F(train_fold_indices,:);
+    y_train = y(train_fold_indices,:);
     
     % estimate weights from training data
     B = regress_weights(F_train, y_train, method, K, varargin{:});
     clear F_train y_train;
        
     % prediction from test features
-    F_test = F_folds{test_fold};
+    F_test = F(test_fold_indices, :);
     F_test = [ones(size(F_test, 1), 1), F_test]; %#ok<AGROW>
     yh = F_test * B;
     clear F_test B;
         
     % accuracy metrics
-    err = bsxfun(@minus, yh, y_folds{test_fold});
+    err = bsxfun(@minus, yh, y(test_fold_indices));
     mse(test_fold,:) = mean(err.^2, 1);
-    r(test_fold,:) = corr(yh, y_folds{test_fold});
+    r(test_fold,:) = corr(yh, y(test_fold_indices));
     clear yh;
     
 end
@@ -197,3 +205,5 @@ switch method
     otherwise
         error('No valid method for %s\n', method);
 end
+
+

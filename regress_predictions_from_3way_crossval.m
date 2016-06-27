@@ -1,5 +1,5 @@
 function [yh, mse, r] = ...
-    regress_predictions_from_3way_crossval(F, y, n_folds, method, K, varargin)
+    regress_predictions_from_3way_crossval(F, y, folds, method, K, varargin)
 
 % -- Worked Example --
 % 
@@ -12,13 +12,13 @@ function [yh, mse, r] = ...
 % y = F * w + sig * randn(N,1);
 % 
 % % least-squares baseline
-% n_folds = 10;
+% folds = 10;
 % [ls_yh, ls_mse] = ...
-%     regress_predictions_from_3way_crossval(F, y, n_folds, 'least-squares');
+%     regress_predictions_from_3way_crossval(F, y, folds, 'least-squares');
 % 
 % % ridge
 % [ridge_yh, ridge_mse] = ...
-%     regress_predictions_from_3way_crossval(F, y, n_folds, 'ridge', 2.^(-30:30));
+%     regress_predictions_from_3way_crossval(F, y, folds, 'ridge', 2.^(-30:30));
 % 
 % % compare MSE for least-squares and ridge
 % figure;
@@ -26,7 +26,7 @@ function [yh, mse, r] = ...
 % l = max([max(abs(xlim)), max(abs(ylim))]);
 % xlim([0 l]); ylim([0 l]);
 % hold on; plot([0 l], [0 l], 'r--');
-% xlabel('Least Squares MSE'); ylabel('Estimated Weights');
+% xlabel('Least Squares MSE'); ylabel('Ridge MSE');
 
 % dimensions of feature matrix
 [N,P] = size(F);
@@ -36,7 +36,7 @@ assert(iscolumn(y) && length(y) == N);
 
 % number of folds
 if nargin < 3
-    n_folds = N;
+    folds = N;
 end
 
 % ridge is the default method
@@ -60,43 +60,48 @@ if nargin < 5
     end
 end
 
-% divide features and data into folds
-F_folds = create_folds(F, n_folds);
-y_folds = create_folds(y, n_folds);
+% divide signal into folds
+if isscalar(folds)
+    n_folds = folds;
+    fold_indices = subdivide(N, folds);
+    clear folds;
+else
+    assert(isvector(folds));
+    [~,~,fold_indices] = unique(folds(:));
+    n_folds = max(fold_indices);
+    clear folds;
+end
 
 % calculate predictions
-mse = nan(n_folds, 1);
 r = nan(n_folds, 1);
-yh_folds = cell(1, n_folds);
+yh = nan(N, 1);
 for test_fold = 1:n_folds
         
     % train and testing folds
-    train_folds = setdiff(1:n_folds, test_fold);
+    test_fold_indices = fold_indices == test_fold;
+    train_fold_indices = ~test_fold_indices;
     
     % concatenate training data
-    F_train = cat(1, F_folds{train_folds});
-    y_train = cat(1, y_folds{train_folds});
-    
+    F_train = F(train_fold_indices,:);
+    y_train = y(train_fold_indices,:);
     
     % estimate regression weights using 2-way cross validation on training set
     B = regress_weights_from_2way_crossval(...
-        F_train, y_train, n_folds-1, method, K, varargin{:});
-    
-    keyboard;
-    
+        F_train, y_train, fold_indices(train_fold_indices), ...
+        method, K, varargin{:});
+        
     % prediction from test features
-    F_test = F_folds{test_fold};
+    F_test = F(test_fold_indices,:);
     F_test = [ones(size(F_test, 1), 1), F_test]; %#ok<AGROW>
-    yh_folds{test_fold} = F_test * B;
+    yh(test_fold_indices) = F_test * B;
     
     % accuracy metrics
-    err = yh_folds{test_fold} - y_folds{test_fold};
-    mse(test_fold) = mean(err.^2, 1);
-    r(test_fold) = corr(yh_folds{test_fold}, y_folds{test_fold});
+    r(test_fold) = corr(yh(test_fold_indices), y(test_fold_indices));
     
 end
 
-yh = cat(1,yh_folds{:});
+mse = mean((yh-y).^2, 1);
+
 
 
 
