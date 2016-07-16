@@ -50,7 +50,10 @@ if optInputs(varargin, 'tick-width');
     tick_width = varargin{optInputs(varargin, 'tick-width')+1};
 end
 
-load('colormap-default-line-colors.mat', 'cmap');
+% load desired color map
+directory_containing_this_file = fileparts(which(mfilename));
+load([directory_containing_this_file ...
+    '/cmaps/colormap-default-line-colors.mat'], 'cmap');
 
 % plot
 figure(gcf);

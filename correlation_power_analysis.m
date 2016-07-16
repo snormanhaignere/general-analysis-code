@@ -20,7 +20,7 @@ function expected_r = correlation_power_analysis(measured_r, N, plot_figure)
 % correlation_power_analysis(-0.5,2.^(0:4),1);
 
 N = sort(N);
-expected_r = sign(measured_r)*N*abs(measured_r) ./ (1-abs(measured_r)+N*abs(measured_r));
+expected_r = N * (sign(measured_r) .* abs(measured_r)) ./ (1-abs(measured_r)+N*abs(measured_r));
 if plot_figure
     plot(log2(N),expected_r,'k-o','LineWidth',2)
     xlabel('N');
