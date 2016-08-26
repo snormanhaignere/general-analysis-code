@@ -1,5 +1,5 @@
-function [beta_contrast, logP, contrast_variance, df] ...
-    = regress_stats_ols(Y, X, C)
+function [beta_contrast, logP, contrast_variance, df, R] ...
+    = regress_stats_ols(Y, X, C, varargin)
 
 % Ordinary least-squares regression with corresponding stats, assuming
 % independent errors
