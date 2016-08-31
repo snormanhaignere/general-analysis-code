@@ -1,1 +1,1 @@
-This directory contains misc analysis scripts that I’ve found useful across a variety of projects. The code is written for my own personal use. Anyone is welcome to use it, but none of it is actively supported. 
+This directory contains misc analysis scripts that I’ve found useful across a variety of projects. The code is written for my own personal use. Anyone is welcome to use it, but none of it is actively supported. There are also some scripts written by others, that are included here. 
