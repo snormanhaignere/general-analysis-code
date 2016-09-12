@@ -1,5 +1,7 @@
 function d = jsdiv(X,Y,varargin)
 
+% d = jsdiv(X,Y,varargin)
+% 
 % Calculates the jensen-shannon divergence between two vectors, or corresponding
 % columns of two matrices. Each column is assumed to contain samples from an
 % underlying distribution, which is approximated using a histogram. A constant
@@ -7,23 +9,48 @@ function d = jsdiv(X,Y,varargin)
 % 
 % see https://en.wikipedia.org/wiki/Jensen%E2%80%93Shannon_divergence
 % 
+% -- Inputs --
+% 
+% X, Y: Input matrices, histograms are compared across corresponding columns
+% 
+% -- Outputs --
+% 
+% d: Jensen-shannon divergence for correspdoning columns of X & Y
+% 
+% -- Optional Inputs -- 
+% 
+% All optional arguments are specified as key value pair, e.g. 'n_bins', 50
+% 
+% n_bins: number of bins to used to compute histogram, default is size(X,1)/10
+% 
+% eps_factor: eps_factor / n_bins is added to the probability of each bin to
+% avoid zero entries.
+% 
 % 2016-08-30 - Created, Sam NH
+% 
+% 2016-08-31 - Added comments, Sam NH
 
-% ensure size of the inputs is the same
-% and that inputs are a 2D matrix or vector
-assert(all(size(X)==size(Y)));
+% ensure inputs are a 2D matrix or vector
 assert(ismatrix(X));
+if isvector(X) && isvector(Y)
+    X = X(:);
+    Y = Y(:);
+end
+
+% check number of columns matches
+assert(size(X,2)==size(Y,2));
 
 % dimensionality of input
-[n_samples, n_cols] = size(X);
+[~, n_cols] = size(X);
+
+% number of samples
+n_samples_X = size(X,1);
+n_samples_Y = size(Y,1);
 
 % optional input arguments
-I.n_bins = n_samples/10;
+I.n_bins = min([n_samples_X, n_samples_Y])/10;
 I.eps_factor = 1e-6;
 I = parse_optInputs_keyvalue(varargin, I);
-
-% epsilon equals a factor divided by the number of bins
-eps = I.eps_factor / I.n_bins;
 
 d = nan(1,n_cols);
 for i = 1:n_cols
@@ -43,9 +70,9 @@ for i = 1:n_cols
     q = q / sum(q);
     
     % add epsilon and renormalize
-    p = p + eps;
+    p = p + I.eps_factor / I.n_bins;
     p = p / sum(p);
-    q = q + eps;
+    q = q + I.eps_factor / I.n_bins;
     q = q / sum(q);
     
     % Calculate Jensen-Shannon divergence

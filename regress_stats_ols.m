@@ -2,7 +2,11 @@ function [beta_contrast, logP, contrast_variance, df, R] ...
     = regress_stats_ols(Y, X, C, varargin)
 
 % Ordinary least-squares regression with corresponding stats, assuming
-% independent errors
+% independent errors.
+
+% handle optional inputs and defaults
+I.demean = true;
+I = parse_optInputs_keyvalue(varargin, I);
 
 % dimensionality of feature matrix
 [N,P] = size(X);
@@ -16,8 +20,13 @@ if nargin < 3
 end
 
 % demean X and Y
-Y = bsxfun(@minus, Y, mean(Y));
-X = bsxfun(@minus, X, mean(X));
+if I.demean
+    Y = bsxfun(@minus, Y, mean(Y));
+    X = bsxfun(@minus, X, mean(X));
+    df = size(Y,1) - size(X,2) - 1;
+else
+    df = size(Y,1) - size(X,2);
+end
 
 % regress
 B = pinv(X) * Y;
@@ -26,7 +35,6 @@ B = pinv(X) * Y;
 beta_contrast = C' * B;
 
 % variance of residual
-df = size(Y,1) - size(X,2) - 1;
 E = (Y - X*B);
 R = sum(E.^2)/df;
 

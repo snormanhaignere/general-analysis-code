@@ -25,7 +25,9 @@ function I = parse_optInputs_keyvalue(optargs, I)
 
 % should be an event number of arguments
 n_optargs = length(optargs);
-assert(mod(n_optargs,2)==0);
+if mod(n_optargs,2)~=0
+    error('There are not an even number of optional inputs');
+end
 
 % initialize with empty structure if not specified
 if nargin < 2

@@ -1,5 +1,4 @@
 
-clc;
-X = randn(1000,4);
-Y = randn(1000,4);
-d = bhat_coef(X,Y)
+X = randn(100e3,4);
+Y = randn(100e3,4);
+d = bhat_coef(X,Y, 'n_bins',50)
