@@ -9,23 +9,23 @@ I.demean = true;
 I = parse_optInputs_keyvalue(varargin, I);
 
 % dimensionality of feature matrix
-[N,P] = size(X);
+N = size(X,1);
 
 % check size
 assert(N == size(Y,1));
 
 % set contrast matrix to identity
 if nargin < 3
-    C = eye(P);
+    C = eye(size(X,2));
 end
 
 % demean X and Y
 if I.demean
     Y = bsxfun(@minus, Y, mean(Y));
     X = bsxfun(@minus, X, mean(X));
-    df = size(Y,1) - size(X,2) - 1;
+    df = size(Y,1) - sum(any(X~=0,1)) - 1;
 else
-    df = size(Y,1) - size(X,2);
+    df = size(Y,1) - sum(any(X~=0,1));
 end
 
 % regress

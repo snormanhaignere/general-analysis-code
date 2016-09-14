@@ -41,7 +41,6 @@ if n_optargs == 0
     return;
 end
 
-
 % assign keys and values
 i_key = 1:2:n_optargs;
 i_val = 2:2:n_optargs;
