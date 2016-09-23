@@ -30,7 +30,7 @@ I = parse_optInputs_keyvalue(varargin, I);
 stat_dims = size(stat);
 
 % convert all vectors to column vectors
-if isvector(stat)
+if isvector(stat) && ismatrix(null_stat)
     stat = stat(:);
 end
 

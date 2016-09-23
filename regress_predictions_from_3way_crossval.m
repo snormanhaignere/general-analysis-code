@@ -85,10 +85,14 @@ for test_fold = 1:n_folds
     F_train = F(train_fold_indices,:);
     y_train = y(train_fold_indices,:);
     
-    % estimate regression weights using 2-way cross validation on training set
-    B = regress_weights_from_2way_crossval(...
-        F_train, y_train, fold_indices(train_fold_indices), ...
-        method, K, varargin{:});
+    if strcmp(method, 'least-squares')
+        B = pinv([ones(size(F_train,1),1), F_train])*y_train;
+    else
+        % estimate regression weights using 2-way cross validation on training set
+        B = regress_weights_from_2way_crossval(...
+            F_train, y_train, fold_indices(train_fold_indices), ...
+            method, K, varargin{:});
+    end
         
     % prediction from test features
     F_test = F(test_fold_indices,:);
