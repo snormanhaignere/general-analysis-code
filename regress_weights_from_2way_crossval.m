@@ -1,5 +1,5 @@
 function [B, best_K, mse, r, mse_bestK] = ...
-    regress_weights_from_2way_crossval(F, y, folds, method, K, varargin)
+    regress_weights_from_2way_crossval(F, y, folds, method, K)
 
 % [B, best_K, mse, r] = ...
 %     regress_weights_from_2way_crossval(F, y, folds, method, K, varargin)
@@ -89,17 +89,17 @@ function [B, best_K, mse, r, mse_bestK] = ...
 assert(iscolumn(y) && length(y) == N);
 
 % number of folds
-if nargin < 3
+if nargin < 3 || isempty(folds)
     folds = N;
 end
 
 % ridge is the default method
-if nargin < 4
+if nargin < 4 || isempty(method)
     method = 'ridge';
 end
 
 % default range of regularization parameters
-if nargin < 5
+if nargin < 5 || isempty(K)
     switch method
         case 'least-squares'
             K = [];
@@ -142,7 +142,7 @@ for test_fold = 1:n_folds
     y_train = y(train_fold_indices,:);
     
     % estimate weights from training data
-    B = regress_weights(F_train, y_train, method, K, varargin{:});
+    B = regress_weights(F_train, y_train, method, K);
     clear F_train y_train;
        
     % prediction from test features
@@ -153,8 +153,8 @@ for test_fold = 1:n_folds
         
     % accuracy metrics
     err = bsxfun(@minus, yh, y(test_fold_indices));
-    mse(test_fold,:) = mean(err.^2, 1);
-    r(test_fold,:) = corr(yh, y(test_fold_indices));
+    mse(test_fold,:) = nanmean(err.^2, 1);
+    r(test_fold,:) = nancorr(yh, y(test_fold_indices));
     clear yh;
     
 end
@@ -177,9 +177,15 @@ else
 end
 
 % estimate weights using all of the data
-B = regress_weights(F, y, method, best_K, varargin{:});
+B = regress_weights(F, y, method, best_K);
 
-function B = regress_weights(F, y, method, K, varargin)
+function B = regress_weights(F, y, method, K)
+
+% remove NaN values
+xi = ~isnan(y);
+y = y(xi);
+F = F(xi,:);
+clear xi;
 
 [N, P] = size(F);
 n_K = length(K);
@@ -190,12 +196,12 @@ switch method
         B = pinv([ones(N,1), F]) * y;
     
     case 'ridge'
-        B = ridge(y, F, K, 0, varargin{:});
+        B = ridge(y, F, K, 0);
         
     case 'pls'
         B = nan(P+1, n_K);
         for j = 1:n_K
-            [~,~,~,~,B(:,j)] = plsregress(F, y, K(j), varargin{:});
+            [~,~,~,~,B(:,j)] = plsregress(F, y, K(j));
         end
         
     case 'lasso'

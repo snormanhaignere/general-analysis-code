@@ -31,7 +31,9 @@ if any(isnan(r_smps(:)))
     fprintf('Unable to calculate r2 due to unreliable measures for %.1f%% of samples\n', mean(isnan(r_smps(:)))*100);
 end
 
-xi = ~isnan(r_smps);
-r_smps = [r_smps(xi); r_smps(~xi)];
-r_smps(xi) = sort(r_smps(xi),'ascend');
-r_std_err = interp1(linspace(0,1,sum(xi)), r_smps(xi), normcdf([-1 1],0,1)); % standard errors
+if mean(isnan(r_smps(:))) > 0.1
+    fprintf('Too many unreliable measures to calculate standard error\n');
+    r_std_err = [NaN NaN];
+else
+    r_std_err = stderr_from_samples(r_smps(~isnan(r_smps)));
+end

@@ -21,6 +21,8 @@ function [normalized_r, normalized_r2] = normalized_correlation(X,Y)
 % approximation, and these errors were returned as the third and fourth argument of the function.
 % This approximation only applies to raw not noise-corrected values, and thus I removed these
 % additional outputs.
+% 
+% 2016-10-28: corr to nancorr to allow for NaN inputs
 
 % dimensions of input matrices
 nx = size(X,2);
@@ -28,14 +30,14 @@ ny = size(Y,2);
 
 % test-retest correlation
 if ny > 1
-    ry = corr(Y);
+    ry = nancorr(Y);
     ry = tanh(mean(atanh(ry(~eye(ny))))); % z-average off-diagonal elements
 else
     ry = 1;
 end
 
 if nx > 1
-    rx = corr(X);
+    rx = nancorr(X);
     rx = tanh(mean(atanh(rx(~eye(nx))))); % z-average off-diagonal elements
 else
     rx = 1;
@@ -49,7 +51,7 @@ if rx <= 0 || ry <=0
 end
 
 % correlation between measures
-rxy = corr(X,Y);
+rxy = nancorr(X,Y);
 rxy = tanh(mean(atanh(rxy(:)))); % z-average all pairs
 
 % normalized correlation

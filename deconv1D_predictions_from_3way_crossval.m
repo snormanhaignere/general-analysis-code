@@ -1,4 +1,45 @@
-function Yh = deconv1D_predictions_from_3way_crossval(F, Y, n_delays, folds, method, K, varargin)
+function Yh = deconv1D_predictions_from_3way_crossval(F, Y, n_delays, folds, method, K, MAT_file)
+
+% feature MAT file
+if ischar(F)
+    load(F, 'F');
+end
+
+% data MAT file
+if ischar(Y)
+    load(Y, 'Y');
+end
+
+% number of folds
+if nargin < 4
+    folds = 10;
+end
+
+% ridge is the default method
+if nargin < 5
+    method = 'ridge';
+end
+
+% default range of regularization parameters
+if nargin < 6
+    switch method
+        case 'least-squares'
+            K = [];
+        case 'ridge'
+            K = 2.^(-30:30);
+        case 'pls'
+            K = 1:round(P/3);
+        case 'lasso'
+            K = 2.^(-20:20);
+        otherwise
+            error('No valid method for %s\n', method);
+    end
+end
+
+% file to save predictions to
+if nargin < 7
+    MAT_file = [];
+end
 
 % unwrap different features
 dims = size(F);
@@ -18,5 +59,10 @@ F_shifted = reshape(F_shifted, [n_smps, n_features * n_delays]);
 Yh = nan(size(Y));
 for i = 1:size(Y,2)
     Yh(:,i) = regress_predictions_from_3way_crossval(F_shifted, ...
-        Y(:,i), folds, method, K, varargin);
+        Y(:,i), folds, method, K);
+end
+
+% save results
+if ~isempty(MAT_file)
+    save(MAT_file, 'Yh');
 end
