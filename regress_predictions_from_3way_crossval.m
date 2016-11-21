@@ -1,5 +1,6 @@
 function [yh, mse, r, test_fold_indices] = ...
-    regress_predictions_from_3way_crossval(F, y, test_folds, method, K, train_folds)
+    regress_predictions_from_3way_crossval(F, y, test_folds, method, K, ...
+    train_folds, MAT_file)
 
 % -- Worked Example --
 % 
@@ -117,6 +118,9 @@ end
 
 mse = nanmean((yh-y).^2, 1);
 
+if nargin >= 7 && ~isempty(MAT_file)
+    save(MAT_file, 'yh', 'mse', 'r', 'test_fold_indices');
+end
 
 
 

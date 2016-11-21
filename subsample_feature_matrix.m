@@ -14,5 +14,3 @@ while mean_adjacent_corr > max_average_corr
     mean_adjacent_corr = mean(elem_just_below_diag(corr(F)));
     subsamp_factor = subsamp_factor * 2;
 end
-
-
