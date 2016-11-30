@@ -1,5 +1,5 @@
 function [Yh, test_folds] = regress_predictions_parallelize_with_slurm(...
-    F, Y, test_folds, method, K, train_folds, output_directory)
+    F, Y, test_folds, method, K, train_folds, output_directory, varargin)
 
 addpath('/mindhive/nklab/u/svnh/sbatch-code-v2');
 
@@ -7,6 +7,7 @@ addpath('/mindhive/nklab/u/svnh/sbatch-code-v2');
 B.max_num_process = 30;
 B.batch_directory = output_directory;
 B.mem = '8000';
+B = parse_optInputs_keyvalue(varargin, B);
 
 Yh = nan(size(Y));
 while 1
