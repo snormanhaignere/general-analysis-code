@@ -81,6 +81,8 @@ function [B, best_K, mse, r, mse_bestK] = ...
 %     drawnow;
 %         
 % end
+% 
+% 2016-11-30: Modified to use a faster ridge code (see ridge_via_svd.m), Sam NH
 
 % dimensions of feature matrix
 [N,P] = size(F);
@@ -196,7 +198,7 @@ switch method
         B = pinv([ones(N,1), F]) * y;
     
     case 'ridge'
-        B = ridge(y, F, K, 0);
+        B = ridge_via_svd(y, F, K);
         
     case 'pls'
         B = nan(P+1, n_K);
