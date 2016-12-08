@@ -1,6 +1,6 @@
 function [yh, mse, r, test_fold_indices] = ...
     regress_predictions_from_3way_crossval(F, y, test_folds, method, K, ...
-    train_folds, MAT_file)
+    train_folds, MAT_file, std_feats)
 
 % -- Worked Example --
 % 
@@ -28,6 +28,8 @@ function [yh, mse, r, test_fold_indices] = ...
 % xlim([0 l]); ylim([0 l]);
 % hold on; plot([0 l], [0 l], 'r--');
 % xlabel('Least Squares MSE'); ylabel('Ridge MSE');
+% 
+% 2016-12-8 Changed how features are standardized prior to regression, Sam NH
 
 % dimensions of feature matrix
 [N,P] = size(F);
@@ -59,6 +61,10 @@ if nargin < 5 || isempty(K)
         otherwise
             error('No valid method for %s\n', method);
     end
+end
+
+if nargin < 8 || isempty(std_feats)
+    std_feats = true;
 end
 
 % divide signal into folds
@@ -103,7 +109,7 @@ for test_fold = 1:n_folds
     else
         % estimate regression weights using 2-way cross validation on training set
         B = regress_weights_from_2way_crossval(...
-            F_train, y_train, train_fold_indices, method, K);
+            F_train, y_train, train_fold_indices, method, K, std_feats);
     end
         
     % prediction from test features

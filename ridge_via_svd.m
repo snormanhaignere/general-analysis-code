@@ -1,4 +1,4 @@
-function b = ridge_via_svd(y,X,k)
+function b = ridge_via_svd(y,X,k,std_feats)
 
 % Performs ridge regression via the SVD of the feature matrix X. Unlike builtin
 % function ridge, this function avoids computing very large covariance matrices
@@ -48,6 +48,11 @@ function b = ridge_via_svd(y,X,k)
 % 
 % 2016-11-30: Created, Sam NH
 
+% whether or not to z-score
+if nargin < 4
+    std_feats = true;
+end
+
 % number of regularization constants
 nK = length(k);
 
@@ -55,10 +60,15 @@ nK = length(k);
 [N,D] = size(X);
 assert(size(y,1) == N && size(y,2) == 1);
 
-% z-score feature matrix but remember means and standard deviations
-stdX = std(X);
+% de-mean or zscore features
+if std_feats
+    normfac = std(X);
+else
+    normfac = ones(1,size(X,2));
+end
 mX = mean(X);
-Xz = zscore(X);
+Xz = bsxfun(@minus, X, mX);
+Xz = bsxfun(@times, Xz, 1./normfac);
 
 % demean y
 ym = y - mean(y);
@@ -80,7 +90,7 @@ end
 % e = ym - Xz * b
 
 % rescale b
-b = bsxfun(@times, b, 1./stdX');
+b = bsxfun(@times, b, 1./normfac');
 
 % add beta for ones regressor
 b = [mean(y)-mX * b; b];
