@@ -1,6 +1,6 @@
 function [yh, mse, r, test_fold_indices] = ...
     regress_predictions_from_3way_crossval(F, y, test_folds, method, K, ...
-    train_folds, MAT_file, std_feats)
+    train_folds, MAT_file, std_feats, groups, n_comp_per_group)
 
 % -- Worked Example --
 % 
@@ -67,6 +67,16 @@ if nargin < 8 || isempty(std_feats)
     std_feats = true;
 end
 
+% by assign everything to the same group
+if nargin < 9
+    groups = [];
+end
+
+% by default, set number of components to minimum number of features per group
+if nargin < 10 
+    n_comp_per_group = [];
+end
+
 % divide signal into folds
 if isscalar(test_folds)
     n_folds = test_folds;
@@ -109,7 +119,8 @@ for test_fold = 1:n_folds
     else
         % estimate regression weights using 2-way cross validation on training set
         B = regress_weights_from_2way_crossval(...
-            F_train, y_train, train_fold_indices, method, K, std_feats);
+            F_train, y_train, train_fold_indices, method, K, std_feats, ...
+            groups, n_comp_per_group);
     end
         
     % prediction from test features

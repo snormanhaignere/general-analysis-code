@@ -7,6 +7,8 @@ addpath('/mindhive/nklab/u/svnh/sbatch-code-v2');
 B.max_num_process = 30;
 B.batch_directory = output_directory;
 B.mem = '8000';
+B.std_feats = true;
+B.groups = [];
 B = parse_optInputs_keyvalue(varargin, B);
 
 Yh = nan(size(Y));
@@ -23,7 +25,7 @@ while 1
             % matlab function, arguments and directory to call the function from
             B.matlab_fn = @regress_predictions_from_3way_crossval;
             B.matlab_fn_args = {F, Y(:,i), test_folds, method, K,...
-                train_folds, MAT_file};
+                train_folds, MAT_file, B.std_feats, B.groups};
             B.directory_to_run_from = '/mindhive/nklab/u/svnh/general-analysis-code';
             
             % call the sbatch

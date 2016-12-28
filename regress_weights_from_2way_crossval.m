@@ -1,5 +1,6 @@
 function [B, best_K, mse, r, mse_bestK] = ...
-    regress_weights_from_2way_crossval(F, y, folds, method, K, std_feats)
+    regress_weights_from_2way_crossval(F, y, folds, method, K, std_feats, ...
+    groups, n_comp_per_group)
 
 % [B, best_K, mse, r] = ...
 %     regress_weights_from_2way_crossval(F, y, folds, method, K)
@@ -119,8 +120,26 @@ if nargin < 5 || isempty(K)
     end
 end
 
+% by default standardize features
 if nargin < 6 || isempty(std_feats)
     std_feats = true;
+end
+
+% by assign everything to the same group
+if nargin < 7 || isempty(groups)
+    groups = ones(1,P);
+end
+groups = groups(:)';
+n_groups = max(groups);
+assert(all((1:n_groups) == unique(groups)));
+assert(length(groups) == P);
+
+% by default, set number of components to minimum number of features per group
+if nargin < 8 || isempty(n_comp_per_group)
+    for i = 1:n_groups
+        n_comp_per_group(i) = sum(groups==i);
+    end
+    n_comp_per_group(:) = min(n_comp_per_group);
 end
 
 if isscalar(folds)
@@ -151,7 +170,7 @@ for test_fold = 1:n_folds
     y_train = y(train_fold_indices,:);
     
     % estimate weights from training data
-    B = regress_weights(F_train, y_train, method, K, std_feats);
+    B = regress_weights(F_train, y_train, method, K, std_feats, groups, n_comp_per_group);
     clear F_train y_train;
     
     % prediction from test features
@@ -186,9 +205,9 @@ else
 end
 
 % estimate weights using all of the data
-B = regress_weights(F, y, method, best_K, std_feats);
+B = regress_weights(F, y, method, best_K, std_feats, groups, n_comp_per_group);
 
-function B = regress_weights(F, y, method, K, std_feats)
+function B = regress_weights(F, y, method, K, std_feats, groups, n_comp_per_group)
 
 % remove NaN values
 xi = ~isnan(y);
@@ -197,7 +216,7 @@ F = F(xi,:);
 clear xi;
 
 % number of features
-P = size(F,2);
+[N,P] = size(F);
 
 % number of regularization parameters
 n_K = length(K);
@@ -215,35 +234,67 @@ Fz = bsxfun(@times, Fz, 1./normfac);
 % de-mean data
 ym = y-mean(y);
 
+% reduce number of components per group
+n_groups = max(groups);
+if n_groups > 1
+    % number of components per group can't exceed number of data-points
+    n_comp_per_group = min(n_comp_per_group, N);
+    Z = nan(N, sum(n_comp_per_group));
+    V = cell(1,n_groups);
+    for i = 1:n_groups
+        % svd on features from this group
+        [U,S,V{i}] = svd(Fz(:,groups==i), 'econ');
+        
+        % select subset of components
+        L = n_comp_per_group(i);
+        Z(:,(1:L) + sum(n_comp_per_group(1:i-1))) = U(:,1:L) * S(1:L,1:L);
+        V{i} = V{i}(:,1:L);
+        clear L;
+    end
+else
+    Z = Fz;
+end
+
 % weights using all of the data
 switch method
     case 'least-squares'
-        B = pinv(Fz) * ym;
+        BZ = pinv(Z) * ym;
         
     case 'pcreg' % principal components regression
-        [U,S,V] = svd(Fz,'econ');
-        B = nan(P, n_K);
+        [U,S,V] = svd(Z,'econ');
+        BZ = nan(P, n_K);
         inv_sing = 1./diag(S);
         for j = 1:n_K
-            B(:,j) = V(:,1:K(j)) * (inv_sing(1:K(j)) .* (U(:,1:K(j))' * ym));
+            BZ(:,j) = V(:,1:K(j)) * (inv_sing(1:K(j)) .* (U(:,1:K(j))' * ym));
         end
         
     case 'ridge'
-        B = ridge_via_svd(ym, Fz, K, false);
-        B = B(2:end,:);
+        BZ = ridge_via_svd(ym, Z, K, false);
+        BZ = BZ(2:end,:);
         
     case 'pls'
-        B = nan(P+1, n_K);
+        BZ = nan(P+1, n_K);
         for j = 1:n_K
-            [~,~,~,~,B(:,j)] = plsregress(Fz, ym, K(j));
+            [~,~,~,~,BZ(:,j)] = plsregress(Z, ym, K(j));
         end
-        B = B(2:end,:);
+        BZ = BZ(2:end,:);
         
     case 'lasso'
-        B = lasso(Fz, ym, 'Lambda', K, 'Standardize', false);
+        BZ = lasso(Z, ym, 'Lambda', K, 'Standardize', false);
         
     otherwise
         error('No valid method for %s\n', method);
+end
+
+% map back to non-PC space
+if n_groups > 1
+    B = nan(P, n_K);
+    for i = 1:n_groups
+        L = n_comp_per_group(i);
+        B(groups==i,:) = V{i} * BZ((1:L) + sum(n_comp_per_group(1:i-1)),:);
+    end
+else
+    B = BZ;
 end
 
 % rescale weights to remove effect of normalization
