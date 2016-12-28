@@ -35,7 +35,7 @@ set(gcf, 'Position', [300 300 800 300]);
 subplot(1,2,1);
 imagesc(f_N, f_M, 20*log10(abs(FTX_shifted)));
 title('Magnitude');
-caxis(MaxAll(20*log10(abs(FTX_shifted))) + [-100 0]);
+caxis(max(20*log10(abs(FTX_shifted(:)))) + [-100 0]);
 
 % phase
 subplot(1,2,2);
