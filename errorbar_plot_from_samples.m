@@ -66,7 +66,7 @@ for j = 1:prod(dims(3:end));
         xvals(:), M(:,indices{:}), EL(:,indices{:}), EU(:,indices{:}), ...
         'LineWidth', 2, 'Color', cmap(mod(j-1,6)+1,:) );
     set(line_handles(indices{:}), 'Marker', 'none');
-    errorbar_tick(line_handles(indices{:}), tick_width);
+    %     errorbar_tick(line_handles(indices{:}), tick_width);
 end
 % xlim([min(xvals(:)), max(xvals(:))]);
 
