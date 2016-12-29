@@ -1,15 +1,39 @@
 function [B, best_K, mse, r, mse_bestK] = ...
-    regress_weights_from_2way_crossval(F, y, folds, method, K, std_feats, ...
-    groups, n_comp_per_group)
+    regress_weights_from_2way_crossval(F, Y, folds, method, K, std_feats, groups)
 
 % [B, best_K, mse, r] = ...
-%     regress_weights_from_2way_crossval(F, y, folds, method, K)
+%   regress_weights_from_2way_crossval(F, Y, folds, method, K, std_feats, groups)
 %
-% Estimates regression using N-fold cross-validation. Available methods include
-% 'ridge', 'pls', and 'lasso'. The set of regularization parameters K
-% (e.g. lambda for ridge) can be specified. The parameters are varied and the
-% weights for the parameter with the lowest cross-validated MSE are returned.
-%
+% Estimates regression weights using regularized, cross-validatd regression.
+% Available methods include 'ridge', 'pls', 'lasso', 'pcreg' (principal
+% components regression). The regularization parameter (K) is varied (i.e.
+% lambda for ridge/lasso, the number of components pls / pcreg), and the weights
+% with the lowest cross-validated MSE are returned. 
+% 
+% -- Inputs -- 
+% 
+% F: [sample x dimension] feature matrix
+% 
+% Y: [sample x D] data matrix
+% 
+% folds: number of folds if scalar (default is 10), or alternatively a vector
+% of size equal to the number of samples that indicates which fold each sample
+% belongs to (e.g. [1 1 1 2 2 2 3 3 3 ...])
+% 
+% method: 'ridge' (default), 'pls', 'lasso', 'pcreg', or 'least-squares'
+% 
+% K: the regularization parameter (see code for defaults, for ridge K = lambda =
+% 2.^(-30:30))
+% 
+% std_feats: whether or not to z-score features (i.e. zscore(F)) before
+% regression (default: true); the features are always demeaned
+% 
+% groups: an optional vector argument (default = []) that specifies which of a N
+% groups each feature belongs to (e.g. [1 1 1 2 2 2 3 3 3 3 3 ...]). If this
+% group vector is specified, then the features are normalized such that the
+% features of each group have the same overall power. This can be useful if
+% there are many more features in one group than another.
+% 
 % -- Worked Example --
 %
 % % features, weights and noisy data
@@ -86,17 +110,23 @@ function [B, best_K, mse, r, mse_bestK] = ...
 % 2016-11-30: Modified to use a faster ridge code (see ridge_via_svd.m), Sam NH
 % 
 % 2016-12-8 Changed how features are standardized prior to regression, Sam NH
-
+% 
+% 2016-12-29 Made it possible to input multiple data vectors as a matrix. This
+% is useful because the much of the computation involves the SVD of the feature
+% matrix, which only needs to be done once. Removed parameter that allowed one
+% to specify the number of components to use per group, and now instead just
+% fix the overall power of the features in each group. Sam NH
 
 % dimensions of feature matrix
 [N,P] = size(F);
 
-% check y is a column vector and dimensions match the feature matrix
-assert(iscolumn(y) && length(y) == N);
+% check dimensions of Y and F match
+assert(size(Y,1) == N);
+D = size(Y,2);
 
 % number of folds
 if nargin < 3 || isempty(folds)
-    folds = N;
+    folds = 10;
 end
 
 % ridge is the default method
@@ -113,6 +143,8 @@ if nargin < 5 || isempty(K)
             K = 2.^(-30:30);
         case 'pls'
             K = 1:round(P/3);
+        case 'pcreg'
+            K = 1:round(P/3);
         case 'lasso'
             K = 2.^(-20:20);
         otherwise
@@ -125,7 +157,7 @@ if nargin < 6 || isempty(std_feats)
     std_feats = true;
 end
 
-% by assign everything to the same group
+% groups
 if nargin < 7 || isempty(groups)
     groups = ones(1,P);
 end
@@ -133,14 +165,6 @@ groups = groups(:)';
 n_groups = max(groups);
 assert(all((1:n_groups) == unique(groups)));
 assert(length(groups) == P);
-
-% by default, set number of components to minimum number of features per group
-if nargin < 8 || isempty(n_comp_per_group)
-    for i = 1:n_groups
-        n_comp_per_group(i) = sum(groups==i);
-    end
-    n_comp_per_group(:) = min(n_comp_per_group);
-end
 
 if isscalar(folds)
     n_folds = folds;
@@ -157,8 +181,8 @@ end
 n_K = length(K);
 
 % calculate predictions
-mse = nan(n_folds, max(n_K,1));
-r = nan(n_folds, max(n_K,1));
+mse = nan(n_folds, max(n_K,1), D);
+r = nan(n_folds, max(n_K,1), D);
 for test_fold = 1:n_folds
     
     % train and testing folds
@@ -166,139 +190,109 @@ for test_fold = 1:n_folds
     train_fold_indices = ~test_fold_indices;
     
     % concatenate training data
+    y_train = Y(train_fold_indices,:);
     F_train = F(train_fold_indices,:);
-    y_train = y(train_fold_indices,:);
+    clear train_fold_indices;
     
-    % estimate weights from training data
-    B = regress_weights(F_train, y_train, method, K, std_feats, groups, n_comp_per_group);
-    clear F_train y_train;
+    % format features and compute svd
+    [U, s, V, mF, normF] = svd_for_regression(F_train, std_feats, groups);
+    clear F_train;
     
     % prediction from test features
     F_test = F(test_fold_indices, :);
     F_test = [ones(size(F_test, 1), 1), F_test]; %#ok<AGROW>
-    yh = F_test * B;
-    clear F_test B;
-    
-    % accuracy metrics
-    err = bsxfun(@minus, yh, y(test_fold_indices));
-    mse(test_fold,:) = nanmean(err.^2, 1);
-    r(test_fold,:) = nancorr(yh, y(test_fold_indices));
-    clear yh;
+    for i = 1:D
+
+        % estimate weights from training data
+        B = regress_weights(y_train(:,i), U, s, V, mF, normF, method, K);
+        
+        % test data
+        yh = F_test * B;
+        clear B;
+        
+        % accuracy metrics
+        err = bsxfun(@minus, yh, Y(test_fold_indices,i));
+        mse(test_fold,:,i) = nanmean(err.^2, 1);
+        r(test_fold,:,i) = nancorr(yh, Y(test_fold_indices,i));
+        clear yh err;
+        
+    end        
+    clear F_test U s V mF normF;
+    clear test_fold_indices;
     
 end
 
 if strcmp(method, 'least-squares')
-    best_K = [];
-    mse_bestK = [];
+    best_K = nan(1,D);
+    mse_bestK = nan(1,D);
 else
-    % best regularization value
-    [~, best_K_index] = min( mean(mse, 1), [], 2 );
-    best_K = K(best_K_index);
-    mse_bestK = mean(mse(:, best_K_index));
-    
-    % check if the best regularizer is on the boundary
-    if strcmp(method, 'ridge') && (best_K_index == 1 || best_K_index == n_K)
-        warning('Best regularizer is on the boundary of possible values\nK=%f', best_K);
-    elseif strcmp(method, 'pls') && best_K_index == n_K
-        warning('Best regularizer is on the boundary of possible values\nK=%f', best_K);
+    best_K = nan(1,D);
+    mse_bestK = nan(1,D);
+    for i = 1:D
+        % best regularization value
+        [~, best_K_index] = min( mean(mse(:,:,i), 1), [], 2 );
+        best_K(i) = K(best_K_index);
+        mse_bestK(i) = mean(mse(:, best_K_index,i));
+        
+        % check if the best regularizer is on the boundary
+        if strcmp(method, 'ridge') && (best_K_index == 1 || best_K_index == n_K)
+            warning('Best regularizer is on the boundary of possible values\nK=%f', best_K(i));
+        elseif strcmp(method, 'pls') && best_K_index == n_K
+            warning('Best regularizer is on the boundary of possible values\nK=%f', best_K(i));
+        end
     end
 end
 
 % estimate weights using all of the data
-B = regress_weights(F, y, method, best_K, std_feats, groups, n_comp_per_group);
-
-function B = regress_weights(F, y, method, K, std_feats, groups, n_comp_per_group)
-
-% remove NaN values
-xi = ~isnan(y);
-y = y(xi);
-F = F(xi,:);
-clear xi;
-
-% number of features
-[N,P] = size(F);
-
-% number of regularization parameters
-n_K = length(K);
-
-% de-mean or z-score features
-if std_feats
-    normfac = std(F);
-else
-    normfac = ones(1,size(F,2));
+[U, s, V, mF, normF] = svd_for_regression(F, std_feats, groups);
+B = nan(P+1, D);
+for i = 1:D
+    B(:,i) = regress_weights(Y(:,i), U, s, V, mF, normF, method, best_K(i));
 end
-mF = mean(F);
-Fz = bsxfun(@minus, F, mF);
-Fz = bsxfun(@times, Fz, 1./normfac);
+clear U s V mF normF;
+
+function B = regress_weights(y, U, s, V, mF, normF, method, K)
+
+% check there are no NaNs
+assert(all(~isnan(y)));
 
 % de-mean data
 ym = y-mean(y);
 
-% reduce number of components per group
-n_groups = max(groups);
-if n_groups > 1
-    % number of components per group can't exceed number of data-points
-    n_comp_per_group = min(n_comp_per_group, N);
-    Z = nan(N, sum(n_comp_per_group));
-    V = cell(1,n_groups);
-    for i = 1:n_groups
-        % svd on features from this group
-        [U,S,V{i}] = svd(Fz(:,groups==i), 'econ');
-        
-        % select subset of components
-        L = n_comp_per_group(i);
-        Z(:,(1:L) + sum(n_comp_per_group(1:i-1))) = U(:,1:L) * S(1:L,1:L);
-        V{i} = V{i}(:,1:L);
-        clear L;
-    end
-else
-    Z = Fz;
-end
-
 % weights using all of the data
 switch method
     case 'least-squares'
-        BZ = pinv(Z) * ym;
+        B = V * ((1./s) .* (U' * ym));
         
     case 'pcreg' % principal components regression
-        [U,S,V] = svd(Z,'econ');
-        BZ = nan(P, n_K);
-        inv_sing = 1./diag(S);
+        n_K = length(K);
+        B = nan(size(V,1), n_K);
         for j = 1:n_K
-            BZ(:,j) = V(:,1:K(j)) * (inv_sing(1:K(j)) .* (U(:,1:K(j))' * ym));
+            B(:,j) = V(:,1:K(j)) * ((1./s(1:K(j))) .* (U(:,1:K(j))' * ym));
         end
         
     case 'ridge'
-        BZ = ridge_via_svd(ym, Z, K, false);
-        BZ = BZ(2:end,:);
+        B = ridge_via_svd(ym, U, s, V, K);
         
     case 'pls'
-        BZ = nan(P+1, n_K);
+        n_K = length(K);
+        B = nan(size(U,2)+1, n_K);
         for j = 1:n_K
-            [~,~,~,~,BZ(:,j)] = plsregress(Z, ym, K(j));
+            Z = bsxfun(@times, U, s');
+            [~,~,~,~,B(:,j)] = plsregress(Z, ym, K(j));
         end
-        BZ = BZ(2:end,:);
+        B = B(2:end,:);
+        B = V * B;
         
     case 'lasso'
-        BZ = lasso(Z, ym, 'Lambda', K, 'Standardize', false);
+        B = lasso(U * diag(s) * V', ym, 'Lambda', K, 'Standardize', false);
         
     otherwise
         error('No valid method for %s\n', method);
 end
 
-% map back to non-PC space
-if n_groups > 1
-    B = nan(P, n_K);
-    for i = 1:n_groups
-        L = n_comp_per_group(i);
-        B(groups==i,:) = V{i} * BZ((1:L) + sum(n_comp_per_group(1:i-1)),:);
-    end
-else
-    B = BZ;
-end
-
 % rescale weights to remove effect of normalization
-B = bsxfun(@times, B, 1./normfac');
+B = bsxfun(@times, B, 1./normF');
 
 % add ones regressor
 B = [mean(y) - mF * B; B];

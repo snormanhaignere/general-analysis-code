@@ -1,7 +1,49 @@
 function [yh, mse, r, test_fold_indices] = ...
-    regress_predictions_from_3way_crossval(F, y, test_folds, method, K, ...
-    train_folds, MAT_file, std_feats, groups, n_comp_per_group)
+    regress_predictions_from_3way_crossval(F, Y, test_folds, method, K, ...
+    train_folds, MAT_file, std_feats, groups)
 
+% Calculates predictions from using a 3-way cross-validated regression. The data
+% is first split into two folds, test and training. The weights of the
+% regression analysis are estimated from the training data, and then applied to
+% the features of the test data. The weights are themselves chosen using 2-way
+% cross-validation (see regress_weights_from_2way_crossval.m) applied to the
+% training data.
+% 
+% Available regression methods include 'ridge', 'pls', 'lasso', 'pcreg'
+% (principal components regression), and 'least-squares' (no regularization).
+% 
+% -- Inputs -- 
+% 
+% F: [sample x dimension] feature matrix
+% 
+% Y: [sample x D] data matrix
+% 
+% test_folds: number of folds to use for the first split into training and test
+% data if scalar (default is 10), or alternatively a vector of size equal to
+% the number of samples that indicates which fold each sample belongs to (e.g.
+% [1 1 1 2 2 2 3 3 3 ...])
+% 
+% method: 'ridge' (default), 'pls', 'lasso', 'pcreg', or 'least-squares'
+% 
+% K: the regularization parameter (see code for defaults, for ridge K = lambda =
+% 2.^(-30:30))
+% 
+% train_folds: number of folds to use for the second split within the training
+% data if scalar (default is 10), or alternatively a vector of size equal to the
+% number of samples that indicates which training fold each sample belongs to
+% (e.g. [1 1 1 2 2 2 3 3 3 ...])
+% 
+% MAT_file: a optional MAT file to save results to 
+% 
+% std_feats: whether or not to z-score features (i.e. zscore(F)) before
+% regression (default: true); the features are always demeaned
+% 
+% groups: an optional vector argument (default = []) that specifies which of a N
+% groups each feature belongs to (e.g. [1 1 1 2 2 2 3 3 3 3 3 ...]). If this
+% group vector is specified, then the features are normalized such that the
+% features of each group have the same overall power. This can be useful if
+% there are many more features in one group than another.
+% 
 % -- Worked Example --
 % 
 % % features, weights and noisy data
@@ -30,12 +72,18 @@ function [yh, mse, r, test_fold_indices] = ...
 % xlabel('Least Squares MSE'); ylabel('Ridge MSE');
 % 
 % 2016-12-8 Changed how features are standardized prior to regression, Sam NH
+% 
+% 2016-12-29 Made it possible to input multiple data vectors as a matrix. This
+% is useful because the much of the computation involves the SVD of the feature
+% matrix, which only needs to be done once. Removed parameter that allowed one
+% to specify the number of components to use per group, and now instead just
+% fix the overall power of the features in each group. Sam NH
 
 % dimensions of feature matrix
 [N,P] = size(F);
 
 % check y is a column vector and dimensions match the feature matrix
-assert(iscolumn(y) && length(y) == N);
+assert(iscolumn(Y) && length(Y) == N);
 
 % number of folds
 if nargin < 3 || isempty(test_folds)
@@ -72,11 +120,6 @@ if nargin < 9
     groups = [];
 end
 
-% by default, set number of components to minimum number of features per group
-if nargin < 10 
-    n_comp_per_group = [];
-end
-
 % divide signal into folds
 if isscalar(test_folds)
     n_folds = test_folds;
@@ -90,8 +133,9 @@ else
 end
 
 % calculate predictions
-r = nan(n_folds, 1);
-yh = nan(N, 1);
+D = size(Y,2);
+r = nan(n_folds, D);
+yh = nan(N, D);
 for test_fold = 1:n_folds
         
     % train and testing folds
@@ -111,7 +155,7 @@ for test_fold = 1:n_folds
     
     % concatenate training data
     F_train = F(~test_samples,:);
-    y_train = y(~test_samples,:);
+    y_train = Y(~test_samples,:);
     
     if strcmp(method, 'least-squares')
         xi = ~isnan(y_train);
@@ -119,21 +163,21 @@ for test_fold = 1:n_folds
     else
         % estimate regression weights using 2-way cross validation on training set
         B = regress_weights_from_2way_crossval(...
-            F_train, y_train, train_fold_indices, method, K, std_feats, ...
-            groups, n_comp_per_group);
+            F_train, y_train, train_fold_indices, method, K, ...
+            std_feats, groups);
     end
         
     % prediction from test features
     F_test = F(test_samples,:);
     F_test = [ones(size(F_test, 1), 1), F_test]; %#ok<AGROW>
-    yh(test_samples) = F_test * B;
+    yh(test_samples,:) = F_test * B;
     
     % accuracy metrics
-    r(test_fold) = nanfastcorr(yh(test_samples), y(test_samples));
+    r(test_fold) = nanfastcorr(yh(test_samples,:), Y(test_samples,:));
     
 end
 
-mse = nanmean((yh-y).^2, 1);
+mse = nanmean((yh-Y).^2, 1);
 
 if nargin >= 7 && ~isempty(MAT_file)
     save(MAT_file, 'yh', 'mse', 'r', 'test_fold_indices');
