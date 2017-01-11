@@ -1,4 +1,4 @@
-function [yh, mse, r, test_fold_indices] = ...
+function [Yh, mse, r, test_fold_indices] = ...
     regress_predictions_from_3way_crossval(F, Y, test_folds, method, K, ...
     train_folds, MAT_file, std_feats, groups)
 
@@ -83,7 +83,7 @@ function [yh, mse, r, test_fold_indices] = ...
 [N,P] = size(F);
 
 % check y is a column vector and dimensions match the feature matrix
-assert(iscolumn(Y) && length(Y) == N);
+assert(size(Y,1) == N);
 
 % number of folds
 if nargin < 3 || isempty(test_folds)
@@ -135,7 +135,7 @@ end
 % calculate predictions
 D = size(Y,2);
 r = nan(n_folds, D);
-yh = nan(N, D);
+Yh = nan(N, D);
 for test_fold = 1:n_folds
         
     % train and testing folds
@@ -166,21 +166,21 @@ for test_fold = 1:n_folds
             F_train, y_train, train_fold_indices, method, K, ...
             std_feats, groups);
     end
-        
+            
     % prediction from test features
     F_test = F(test_samples,:);
     F_test = [ones(size(F_test, 1), 1), F_test]; %#ok<AGROW>
-    yh(test_samples,:) = F_test * B;
+    Yh(test_samples,:) = F_test * B;
     
     % accuracy metrics
-    r(test_fold) = nanfastcorr(yh(test_samples,:), Y(test_samples,:));
+    r(test_fold,:) = nanfastcorr(Yh(test_samples,:), Y(test_samples,:));
     
 end
 
-mse = nanmean((yh-Y).^2, 1);
+mse = nanmean((Yh-Y).^2, 1);
 
 if nargin >= 7 && ~isempty(MAT_file)
-    save(MAT_file, 'yh', 'mse', 'r', 'test_fold_indices');
+    save(MAT_file, 'Yh', 'mse', 'r', 'test_fold_indices');
 end
 
 

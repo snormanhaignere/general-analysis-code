@@ -1,5 +1,6 @@
 function [B, best_K, mse, r, mse_bestK] = ...
-    regress_weights_from_2way_crossval(F, Y, folds, method, K, std_feats, groups)
+    regress_weights_from_2way_crossval(F, Y, folds, method, ...
+    K, std_feats, groups, demean_feats)
 
 % [B, best_K, mse, r] = ...
 %   regress_weights_from_2way_crossval(F, Y, folds, method, K, std_feats, groups)
@@ -116,6 +117,8 @@ function [B, best_K, mse, r, mse_bestK] = ...
 % matrix, which only needs to be done once. Removed parameter that allowed one
 % to specify the number of components to use per group, and now instead just
 % fix the overall power of the features in each group. Sam NH
+% 
+% 2016-01-10 - Made it possible to NOT demean the features and data
 
 % dimensions of feature matrix
 [N,P] = size(F);
@@ -166,6 +169,10 @@ n_groups = max(groups);
 assert(all((1:n_groups) == unique(groups)));
 assert(length(groups) == P);
 
+if nargin < 8 || isempty(demean_feats)
+    demean_feats = true;
+end
+
 if isscalar(folds)
     n_folds = folds;
     fold_indices = subdivide(N, folds);
@@ -195,7 +202,8 @@ for test_fold = 1:n_folds
     clear train_fold_indices;
     
     % format features and compute svd
-    [U, s, V, mF, normF] = svd_for_regression(F_train, std_feats, groups);
+    [U, s, V, mF, normF] = svd_for_regression(...
+        F_train, std_feats, demean_feats, groups);
     clear F_train;
     
     % prediction from test features
@@ -204,7 +212,7 @@ for test_fold = 1:n_folds
     for i = 1:D
 
         % estimate weights from training data
-        B = regress_weights(y_train(:,i), U, s, V, mF, normF, method, K);
+        B = regress_weights(y_train(:,i), U, s, V, mF, normF, method, K, demean_feats);
         
         % test data
         yh = F_test * B;
@@ -244,20 +252,24 @@ else
 end
 
 % estimate weights using all of the data
-[U, s, V, mF, normF] = svd_for_regression(F, std_feats, groups);
+[U, s, V, mF, normF] = svd_for_regression(F, std_feats, demean_feats, groups);
 B = nan(P+1, D);
 for i = 1:D
-    B(:,i) = regress_weights(Y(:,i), U, s, V, mF, normF, method, best_K(i));
+    B(:,i) = regress_weights(Y(:,i), U, s, V, mF, normF, method, best_K(i), demean_feats);
 end
 clear U s V mF normF;
 
-function B = regress_weights(y, U, s, V, mF, normF, method, K)
+function B = regress_weights(y, U, s, V, mF, normF, method, K, demean_feats)
 
 % check there are no NaNs
 assert(all(~isnan(y)));
 
 % de-mean data
-ym = y-mean(y);
+if demean_feats
+    ym = y-mean(y);
+else
+    ym = y;
+end
 
 % weights using all of the data
 switch method
@@ -295,4 +307,8 @@ end
 B = bsxfun(@times, B, 1./normF');
 
 % add ones regressor
-B = [mean(y) - mF * B; B];
+if demean_feats
+    B = [mean(y) - mF * B; B];
+else
+    B = [zeros(1,size(B,2)); B];
+end
