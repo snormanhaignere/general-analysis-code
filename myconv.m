@@ -10,7 +10,7 @@ function y = myconv(sig, h, varargin)
 % 
 % To make the kernel non-causal, add the optional arguments:
 % 
-% myconv(..., 'casual', true).
+% myconv(..., 'causal', true).
 % 
 % In this case the kernel is shifted so that the "central timepoint" is the
 % first entry of the kernel, and the kernel is then convolved with signal as per
