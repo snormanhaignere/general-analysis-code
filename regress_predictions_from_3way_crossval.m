@@ -158,8 +158,16 @@ for test_fold = 1:n_folds
     y_train = Y(~test_samples,:);
     
     if strcmp(method, 'least-squares')
-        xi = ~isnan(y_train);
-        B = pinv([ones(sum(xi),1), F_train(xi,:)])*y_train(xi);
+        try
+            B = nan(P+1,D);
+            for i = 1:D
+                xi = ~isnan(y_train(:,i));
+                B(:,i) = pinv([ones(sum(xi),1), F_train(xi,:)])*y_train(xi,i);
+            end
+        catch ME
+            print_error_message(ME);
+            keyboard;
+        end
     else
         % estimate regression weights using 2-way cross validation on training set
         B = regress_weights_from_2way_crossval(...
