@@ -4,7 +4,7 @@ function [U, s, V, mF, normF] = svd_for_regression(...
 % Helper function for other regression scripts (see ridge_via_svd_wrapper.m and
 % regress_weights_from_2way_crossval.m). Demeans and optionally z-scores the
 % feature matrix, and then calculates the SVD.
-% 
+%
 % 2016-01-10 - Made it possible to NOT demean the features and data
 
 if nargin < 4
@@ -26,6 +26,7 @@ if std_feats
 else
     normF = ones(1,size(F,2));
 end
+normF(normF==0) = 1;
 F_formatted = bsxfun(@times, F_formatted, 1./normF);
 
 % fix overall variance, done separately for each group
@@ -45,6 +46,11 @@ if n_groups > 1
     clear desired_group_norm;
 end
 
-[U,S,V] = svd(F_formatted, 'econ');
-s = diag(S);
-clear S F_formatted;
+try
+    [U,S,V] = svd(F_formatted, 'econ');
+    s = diag(S);
+    clear S F_formatted;
+catch ME
+    print_error_message(ME);
+    keyboard
+end
