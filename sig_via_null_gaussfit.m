@@ -1,4 +1,4 @@
-function signed_log10p = sig_via_null_gaussfit(stat, null_stat, varargin)
+function [signed_log10p, z] = sig_via_null_gaussfit(stat, null_stat, varargin)
 
 % Computes a measure of significance for a sample statistic using samples from
 % the null (e.g. computed via a permutation test). P-values are computed by
@@ -22,6 +22,11 @@ function signed_log10p = sig_via_null_gaussfit(stat, null_stat, varargin)
 %
 % 2016-09-11: Fix a bug in the computation of right- and left-tailed
 % significance
+% 
+% 2017-02-4: Returns z-statistic used to compute significance measure
+% 
+% 2017-02-24: Bug fix: z-stat was originally not being reshaped before being
+% returned
 
 I.tail = 'both';
 I = parse_optInputs_keyvalue(varargin, I);
@@ -72,3 +77,4 @@ end
 
 % reshape back to dimensions of stat
 signed_log10p = reshape(signed_log10p, stat_dims);
+z = reshape(z, stat_dims);
