@@ -1,4 +1,4 @@
-function pinvX = pinv_wls(X,sig)
+function pinvX = pinv_wls(X,sig,orientation)
 % function pinvX = pinv_wls(X,Y)
 % 
 % Returns a matrix similar to the pseudoinverse, useful for weighted-least-squares regression
@@ -37,22 +37,32 @@ function pinvX = pinv_wls(X,sig)
 % pinv(X)
 
 [M,L] = size(X);
-if max([M,L])~=length(sig)
-    error('Length of error vector (sig) should equal largest dimension of X');
+% if max([M,L])~=length(sig)
+%     error('Length of error vector (sig) should equal largest dimension of X');
+% end
+% 
+% if size(sig,2) ~= 1
+%     sig = transpose(sig);
+% end
+% 
+% if size(sig,2) ~= 1
+%     error('sig should be a vector of estimated standard deviations.');
+% end
+
+if nargin < 3
+    if M >= L
+        orientation = 1;
+    else
+        orientation = 2;
+    end
 end
 
-if size(sig,2) ~= 1
-    sig = transpose(sig);
-end
-
-if size(sig,2) ~= 1
-    error('sig should be a vector of estimated standard deviations.');
-end
-
-if M >= L
+if orientation == 1
     % weight matrix
     W = (1./sig) * ones(1,L);
     pinvX = pinv(W .* X) .* W';
-else
+elseif orientation == 2
     pinvX = pinv_wls(transpose(X),sig)';
+else
+    error('Orientation must be 1 or 2 not %d\n', orientation);
 end
