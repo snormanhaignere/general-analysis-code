@@ -4,21 +4,17 @@ function C = nanfunc_all_column_pairs(func, A, B)
 % 
 % 2017-03-14: Created, Sam NH
 
-B_present = nargin >=3 && ~isempty(B);
+if nargin < 3 || isempty(B);
+    B = A;
+end
 
 % apply function
-assert(ismatrix(A));
-n_cols = size(A,2);
-C = nan(n_cols, n_cols);
-for i = 1:n_cols
-    for j = 1:n_cols
-        if B_present
-            xi = ~isnan(A(:,i)) & ~isnan(B(:,j));
-            C(i,j) = func(A(xi,i), B(xi,j));
-        else
-            xi = ~isnan(A(:,i)) & ~isnan(A(:,j));
-            C(i,j) = func(A(xi,i), A(xi,j));
-        end
+assert(ismatrix(A) && ismatrix(B));
+C = nan(size(A,2), size(B,2));
+for i = 1:size(A,2)
+    for j = 1:size(B,2)
+        xi = ~isnan(A(:,i)) & ~isnan(B(:,j));
+        C(i,j) = func(A(xi,i), B(xi,j));
     end
 end
 clear xi;
