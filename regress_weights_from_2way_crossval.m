@@ -9,32 +9,32 @@ function [B, best_K, mse, r, mse_bestK] = ...
 % Available methods include 'ridge', 'pls', 'lasso', 'pcreg' (principal
 % components regression). The regularization parameter (K) is varied (i.e.
 % lambda for ridge/lasso, the number of components pls / pcreg), and the weights
-% with the lowest cross-validated MSE are returned. 
-% 
-% -- Inputs -- 
-% 
+% with the lowest cross-validated MSE are returned.
+%
+% -- Inputs --
+%
 % F: [sample x dimension] feature matrix
-% 
+%
 % Y: [sample x D] data matrix
-% 
+%
 % folds: number of folds if scalar (default is 10), or alternatively a vector
 % of size equal to the number of samples that indicates which fold each sample
 % belongs to (e.g. [1 1 1 2 2 2 3 3 3 ...])
-% 
+%
 % method: 'ridge' (default), 'pls', 'lasso', 'pcreg', or 'least-squares'
-% 
+%
 % K: the regularization parameter (see code for defaults, for ridge K = lambda =
 % 2.^(-30:30))
-% 
+%
 % std_feats: whether or not to z-score features (i.e. zscore(F)) before
 % regression (default: true); the features are always demeaned
-% 
+%
 % groups: an optional vector argument (default = []) that specifies which of a N
 % groups each feature belongs to (e.g. [1 1 1 2 2 2 3 3 3 3 3 ...]). If this
 % group vector is specified, then the features are normalized such that the
 % features of each group have the same overall power. This can be useful if
 % there are many more features in one group than another.
-% 
+%
 % -- Worked Example --
 %
 % % features, weights and noisy data
@@ -109,15 +109,15 @@ function [B, best_K, mse, r, mse_bestK] = ...
 % end
 %
 % 2016-11-30: Modified to use a faster ridge code (see ridge_via_svd.m), Sam NH
-% 
+%
 % 2016-12-8 Changed how features are standardized prior to regression, Sam NH
-% 
+%
 % 2016-12-29 Made it possible to input multiple data vectors as a matrix. This
 % is useful because the much of the computation involves the SVD of the feature
 % matrix, which only needs to be done once. Removed parameter that allowed one
 % to specify the number of components to use per group, and now instead just
 % fix the overall power of the features in each group. Sam NH
-% 
+%
 % 2016-01-10 - Made it possible to NOT demean the features and data
 
 % dimensions of feature matrix
@@ -210,7 +210,7 @@ for test_fold = 1:n_folds
     F_test = F(test_fold_indices, :);
     F_test = [ones(size(F_test, 1), 1), F_test]; %#ok<AGROW>
     for i = 1:D
-
+        
         % estimate weights from training data
         B = regress_weights(y_train(:,i), U, s, V, mF, normF, method, K, demean_feats);
         
@@ -224,7 +224,7 @@ for test_fold = 1:n_folds
         r(test_fold,:,i) = nancorr(yh, Y(test_fold_indices,i));
         clear yh err;
         
-    end        
+    end
     clear F_test U s V mF normF;
     clear test_fold_indices;
     
