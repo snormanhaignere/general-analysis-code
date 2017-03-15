@@ -1,4 +1,5 @@
-function r = normalized_correlation_within_folds(X,Y,folds,correlation_type)
+function r = normalized_correlation_within_folds(...
+    X, Y, folds, correlation_type, throw_warning)
 
 % Calculates the noise-corrected correlation but within folds. Useful in
 % combination with regression scripts.
@@ -25,6 +26,10 @@ if nargin < 4
     correlation_type = 'pearson';
 end
 
+if nargin < 5
+    throw_warning = true;
+end
+
 % order folds
 [~,~,folds] = unique(folds(:));
 n_folds = max(folds);
@@ -43,6 +48,7 @@ for i = 1:n_folds
         case 'demeaned-squared-error'
             similarity_func = @nancorr_variance_sensitive;
         otherwise
+            keyboard;
             error('No matching case');
     end
     
@@ -56,7 +62,9 @@ for i = 1:n_folds
 end
 
 if mean(rXX) <= 0 || mean(rYY) <=0
-    warning('Average test-retest r < 0');
+    if throw_warning
+        warning('Average test-retest r < 0');
+    end
     r = NaN;
     return;
 end
