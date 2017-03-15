@@ -99,6 +99,13 @@ if strcmp(I.normalization, 'max')
     end
 end
 
+% % orthogonalize
+% if I.orthogonalize
+%     for z = 1:size(Y,2)-1
+%         Y(:,z+1) = Y(:,z+1) - Y(:,1:z) * pinv(Y(:,1:z)) * Y(:,z+1);
+%     end
+% end
+
 % split up negative and positive parts
 if ~isempty(I.split_neg_pos)
     assert(isempty(setdiff(I.split_neg_pos, degrees)));
@@ -109,12 +116,12 @@ if ~isempty(I.split_neg_pos)
         if any(i-1 == I.split_neg_pos)
             count = count+1;
             Y_new(xvals > 0,count) = 0;
-            Y_new(xvals < 0,count) = abs(Y(xvals<0,i));
+            Y_new(xvals < 0,count) = Y(xvals<0,i);
             degrees_new(count) = degrees(i);
             
             count = count+1;
             Y_new(xvals < 0,count) = 0;
-            Y_new(xvals > 0,count) = abs(Y(xvals > 0, i));
+            Y_new(xvals > 0,count) = Y(xvals > 0, i);
             degrees_new(count) = degrees(i);
         else
             count = count+1;
@@ -128,12 +135,19 @@ end
 
 % orthogonalize
 if I.orthogonalize
-    for z = 1:max(degrees)
-        xi1 = degrees == z;
-        xi2 = degrees < z;
-        Y(:,xi1) = Y(:,xi1) - Y(:,xi2) * pinv(Y(:,xi2)) * Y(:,xi1);
+    for z = 1:size(Y,2)-1
+        Y(:,z+1) = Y(:,z+1) - Y(:,1:z) * pinv(Y(:,1:z)) * Y(:,z+1);
     end
 end
+
+% % orthogonalize
+% if I.orthogonalize
+%     for z = 1:max(degrees)
+%         xi1 = degrees == z;
+%         xi2 = degrees < z;
+%         Y(:,xi1) = Y(:,xi1) - Y(:,xi2) * pinv(Y(:,xi2)) * Y(:,xi1);
+%     end
+% end
 
 % divide by standard deviation
 if strcmp(I.normalization, 'std')
@@ -155,12 +169,7 @@ end
 %     end
 % end
 
-% % orthogonalize
-% if I.orthogonalize
-%     for z = 1:size(X,2)-1
-%         X(:,z+1) = X(:,z+1) - X(:,1:z) * pinv(X(:,1:z)) * X(:,z+1);
-%     end
-% end
+
 
 
 
