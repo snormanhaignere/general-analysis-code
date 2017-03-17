@@ -41,10 +41,6 @@ while true
         
         if ~exist(MAT_file, 'file')            
             
-            % indicate progress
-            fprintf('Batch %d of %d: %d - %d\n', i, n_batches, yi(1), yi(end));
-            drawnow;
-            
             if B.use_sbatch
                 % set the job id
                 B.job_id = ['sb' num2str(i)];
@@ -56,12 +52,20 @@ while true
                 B.directory_to_run_from = '/mindhive/nklab/u/svnh/general-analysis-code';
                 
                 % call the sbatch
-                call_sbatch_smart(B);
+                job_started = call_sbatch_smart(B);
+                if job_started
+                    fprintf('Started batch %d of %d: %d - %d\n', ...
+                        i, n_batches, yi(1), yi(end));
+                    drawnow;
+                end
                 
             else
                 regress_predictions_from_3way_crossval(F, Y(:,yi), ...
                     test_folds, method, K, train_folds, MAT_file, ...
                     B.std_feats, B.groups);
+                fprintf('Started batch %d of %d: %d - %d\n', ...
+                    i, n_batches, yi(1), yi(end));
+                drawnow;
             end
             
         else
