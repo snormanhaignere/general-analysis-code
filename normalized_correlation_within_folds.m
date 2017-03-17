@@ -1,5 +1,5 @@
 function r = normalized_correlation_within_folds(...
-    X, Y, folds, correlation_type, throw_warning)
+    X, Y, folds, metric, throw_warning)
 
 % Calculates the noise-corrected correlation but within folds. Useful in
 % combination with regression scripts.
@@ -23,7 +23,7 @@ function r = normalized_correlation_within_folds(...
 % 2017-03-15: Streamlined code, added a new correlation_type (variance-sensitive)
 
 if nargin < 4
-    correlation_type = 'pearson';
+    metric = 'pearson';
 end
 
 if nargin < 5
@@ -40,10 +40,10 @@ rXY = nan(n_folds,1);
 
 for i = 1:n_folds
     
-    switch correlation_type
+    switch metric
         case {'pearson', 'r2'}
             similarity_func = @nancorr;
-        case 'rank'
+        case {'rank', 'rank-r2'}
             similarity_func = @nanrankcorr;
         case 'demeaned-squared-error'
             similarity_func = @nancorr_variance_sensitive;
@@ -70,7 +70,7 @@ if mean(rXX) <= 0 || mean(rYY) <=0
 end
 
 r = mean(rXY) / (sqrt(mean(rXX)) * sqrt(mean(rYY)));
-if any(strcmp(correlation_type, {'r2', 'demeaned-squared-error'}))
+if any(strcmp(metric, {'r2', 'demeaned-squared-error', 'rank-r2'}))
     r = sign_and_square(r);
 end
 
