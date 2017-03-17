@@ -2,6 +2,9 @@ function [Yh, test_folds] = regress_predictions_parallelize_with_slurm(...
     F, Y, test_folds, method, K, train_folds, output_directory, varargin)
 
 % 2017-03-15: Added capacity to overwrite files, Sam NH
+% 
+% 2017-03-17: Fixed problem that caused the function to create huge log files
+% when run via slurm.
 
 addpath('/mindhive/nklab/u/svnh/sbatch-code-v2');
 
