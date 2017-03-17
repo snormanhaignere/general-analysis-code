@@ -39,15 +39,17 @@ if isvector(stat) && ismatrix(null_stat)
     stat = stat(:);
 end
 
+% check correspondence of dimensions between stat and null_stat
+for i = 2:ndims(null_stat)
+    if ~(size(null_stat,i) == size(stat,i-1));
+        error('Dimensions of test statistic don''t match with those of the null');
+    end
+end
+
 % number of samples
 n_samples = size(null_stat,1);
 if n_samples < 10
     error('Should be more than 10 samples.');
-end
-
-% check correspondence of dimensions between stat and null_stat
-for i = 2:ndims(null_stat)
-    assert(size(null_stat,i) == size(stat,i-1));
 end
 
 % mean and standard deviation of the null

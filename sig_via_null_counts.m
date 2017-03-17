@@ -12,14 +12,26 @@ function signed_log10p = sig_via_null_counts(stat, null_stat, varargin)
 % 
 % estimated_signed_log10p = sig_via_null_counts([3 3 3], null_smps)
 % analytic_log10p = -log10(2*normcdf(-[3 3 3], [0 0 0], sqrt(variances)))'
+% 
+% 2017-03-17: Added some additional error checks
 
-if isvector(stat)
+if isvector(stat) && ismatrix(null_stat)
     stat = stat(:);
+end
+
+% check correspondence of dimensions between stat and null_stat
+for i = 2:ndims(null_stat)
+    if ~(size(null_stat,i) == size(stat,i-1));
+        error('Dimensions of test statistic don''t match with those of the null');
+    end
 end
 
 % dimensions
 dims_stat = size(stat);
 n_perms = size(null_stat,1);
+if n_perms < 10
+    error('Should be more than 10 samples.');
+end
 
 % replicate stat over the permuted dimension
 stat_rep = repmat( shiftdim(stat, -1),  [n_perms, ones(1,ndims(stat))]);
