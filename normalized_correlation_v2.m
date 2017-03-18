@@ -120,9 +120,22 @@ XYcov = mean(XYcov(:));
 % compute the desired metric
 switch I.metric
     case 'pearson'
-        r = XYcov / sqrt(Xvar * Yvar);
+        if Xvar < 0 || Yvar < 0
+            r = NaN;
+        else
+            r = XYcov / sqrt(Xvar * Yvar);
+        end
     case 'demeaned-squared-error'
-        r = 1 - (Xvar + Yvar - 2*XYcov) / (Xvar + Yvar);
+        if (Xvar + Yvar) < 0
+            r = NaN;
+        else
+            r = 1 - (Xvar + Yvar - 2*XYcov) / (Xvar + Yvar);
+        end
     otherwise
         error('No matching case for metric %s\n', metric);
+end
+
+% check r is real
+if ~isreal(r)
+    error('r should be real');
 end
