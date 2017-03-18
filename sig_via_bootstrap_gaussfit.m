@@ -27,7 +27,7 @@ function signed_log10p = sig_via_bootstrap_gaussfit(smps, varargin)
 % 2017-03-17: Created, Sam NH
 
 dims = size(smps);
-I.null_value = zeros(dims(2:end));
+I.null_value = zeros([dims(2:end),1]);
 I.tail = 'both';
 I = parse_optInputs_keyvalue(varargin, I);
 
