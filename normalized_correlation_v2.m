@@ -86,6 +86,9 @@ function [r, num, denom] = normalized_correlation_v2(X, Y, varargin)
 % nanmedian(abs(r(:) - r2(:)))
 % 
 % 2017-03-19: Modified to return numerator and denominator separately
+% 
+% 2017-03-20: Fixed a bug that prevent the scripts from working when one of the
+% variables is only sampled once.
 
 % whether or not the noise is the same for X and Y samples
 I.same_noise = false;
@@ -101,15 +104,26 @@ else
 end
 
 % estimate variance of the signal
-if size(X,2) > 1
+wx = size(X,2); wy = size(Y,2);
+if wx > 1
     [Xvar, Xnoisevar, Xtotalvar] = separate_sig_and_noise_var(X);
 end
-if size(Y,2) > 1
+if wy > 1
     [Yvar, Ynoisevar, Ytotalvar] = separate_sig_and_noise_var(Y);
 end
+
 if I.same_noise
-    wx = size(X,2); wy = size(Y,2);
-    shared_noisevar = (Xnoisevar .* wx + Ynoisevar*wy) / (wx + wy);
+    if wx == 1 && wy > 1
+        Xtotalvar = var(X,[],1);
+        shared_noisevar = Ynoisevar;
+    elseif wy == 1 && wx > 1
+        Ytotalvar = var(Y,[],1);
+        shared_noisevar = Xnoisevar;
+    elseif wx > 1 && wy > 1
+        shared_noisevar = (Xnoisevar .* wx + Ynoisevar*wy) / (wx + wy);
+    else
+        error('Conditional should not have fallen through');
+    end
     Xvar = Xtotalvar - shared_noisevar;
     Yvar = Ytotalvar - shared_noisevar;
 end
