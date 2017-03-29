@@ -1,4 +1,4 @@
-function [r, num, denom] = normalized_correlation_within_folds_v2(X, Y, folds, varargin)
+function [r, Xvar, Yvar, XYcov] = normalized_correlation_within_folds_v2(X, Y, folds, varargin)
 
 % Calculates the noise-corrected correlation but within folds. Useful in
 % combination with regression scripts (e.g.
@@ -29,6 +29,9 @@ function [r, num, denom] = normalized_correlation_within_folds_v2(X, Y, folds, v
 % 
 % 2017-03-19: Numerator and denominator now averaged before division for
 % stability, Sam NH
+% 
+% 2017-03-29: Instead of averaging numerator and denominator, averages variances
+% and covariances.
 
 I.same_noise = false;
 I.metric = 'pearson';
@@ -39,14 +42,34 @@ I = parse_optInputs_keyvalue(varargin, I);
 n_folds = max(folds);
 
 % r_folds = nan(n_folds, 1);
-num_folds = nan(n_folds, 1);
-denom_folds = nan(n_folds, 1);
+Xvar_folds = nan(n_folds, 1);
+Yvar_folds = nan(n_folds, 1);
+XYcov_folds = nan(n_folds, 1);
 for i = 1:n_folds
     xi = i == folds;
-    [~, num_folds(i), denom_folds(i)] = normalized_correlation_v2(...
+    [~, Xvar_folds(i), Yvar_folds(i), XYcov_folds(i)] = normalized_correlation_v2(...
         X(xi,:), Y(xi,:), 'same_noise', I.same_noise, 'metric', I.metric);
 end
 
-num = mean(num_folds);
-denom = mean(denom_folds);
-r = num/denom;
+Xvar = mean(Xvar_folds);
+Yvar = mean(Yvar_folds);
+XYcov = mean(XYcov_folds);
+
+% compute the desired metric
+switch I.metric
+    case 'pearson'
+        if Xvar < 0 || Yvar < 0
+            r = NaN;
+        else
+            r = XYcov / sqrt(Xvar * Yvar);
+        end
+    case 'demeaned-squared-error'
+        if (Xvar + Yvar) < 0
+            r = NaN;
+        else
+            % r = 1 - (Xvar + Yvar - 2*XYcov) / (Xvar + Yvar);
+            r = XYcov / ((Xvar + Yvar)/2);
+        end
+    otherwise
+        error('No matching case for metric %s\n', metric);
+end

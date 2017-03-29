@@ -1,4 +1,4 @@
-function [r, num, denom] = normalized_correlation_v2(X, Y, varargin)
+function [r, Xvar, Yvar, XYcov] = normalized_correlation_v2(X, Y, varargin)
 
 % Computes an estimate of the normalized correlation between X and Y. Version 2
 % unlike version 1 can be applied to data where only one of the two variables
@@ -89,6 +89,9 @@ function [r, num, denom] = normalized_correlation_v2(X, Y, varargin)
 % 
 % 2017-03-20: Fixed a bug that prevent the scripts from working when one of the
 % variables is only sampled once.
+% 
+% 2017-03-27: Changed output so that it returns the three key stats, rather than
+% the numerator and denominator
 
 % whether or not the noise is the same for X and Y samples
 I.same_noise = false;
@@ -137,24 +140,16 @@ XYcov = mean(XYcov(:));
 switch I.metric
     case 'pearson'
         if Xvar < 0 || Yvar < 0
-            num = NaN;
-            denom = NaN;
             r = NaN;
         else
-            num = XYcov;
-            denom = sqrt(Xvar * Yvar);
-            r = num / denom;
+            r = XYcov / sqrt(Xvar * Yvar);
         end
     case 'demeaned-squared-error'
         if (Xvar + Yvar) < 0
-            num = NaN;
-            denom = NaN;
             r = NaN;
         else
             % r = 1 - (Xvar + Yvar - 2*XYcov) / (Xvar + Yvar);
-            num = XYcov;
-            denom = ((Xvar + Yvar)/2);
-            r = num / denom;
+            r = XYcov / ((Xvar + Yvar)/2);
         end
     otherwise
         error('No matching case for metric %s\n', metric);
