@@ -1,4 +1,4 @@
-function [r, Xvar, Yvar, XYcov] = normalized_correlation_v2(X, Y, varargin)
+function [r, Xvar, Yvar, XYcov] = noise_corrected_similarity(X, Y, varargin)
 
 % Computes an estimate of the normalized correlation between X and Y. Version 2
 % unlike version 1 can be applied to data where only one of the two variables
@@ -92,10 +92,13 @@ function [r, Xvar, Yvar, XYcov] = normalized_correlation_v2(X, Y, varargin)
 % 
 % 2017-03-27: Changed output so that it returns the three key stats, rather than
 % the numerator and denominator
+% 
+% 2017-03-29: Added 'variance_centering' option
 
 % whether or not the noise is the same for X and Y samples
 I.same_noise = false;
 I.metric = 'pearson';
+I.variance_centering = false;
 I = parse_optInputs_keyvalue(varargin, I);
 
 % needs to be multiple samples for X and Y if the noise is different
@@ -104,6 +107,13 @@ if ~I.same_noise
     assert(size(X,2)>1 && (size(Y,2)>1));
 else
     assert(size(X,2)>1 || (size(Y,2)>1));
+end
+
+% set standard deviation of samples to the global mean standard deviation
+% for each variable separately
+if I.variance_centering
+    X = bsxfun(@times, X, mean(std(X))./std(X));
+    Y = bsxfun(@times, Y, mean(std(Y))./std(Y));
 end
 
 % estimate variance of the signal
