@@ -1,5 +1,5 @@
 function r = normalized_correlation_within_folds(...
-    X, Y, folds, metric, throw_warning)
+    X, Y, folds, varargin)
 
 % Calculates the noise-corrected correlation but within folds. Useful in
 % combination with regression scripts.
@@ -13,7 +13,7 @@ function r = normalized_correlation_within_folds(...
 % X = randn(nd,3) + sig*ones(1,3);
 % Y = randn(nd,4)*2 + sig*ones(1,4);
 % folds = subdivide(nd, 10);
-% r = normalized_correlation_within_folds(X,Y,folds,'demeaned-squared-error')
+% r = normalized_correlation_within_folds(X,Y,folds)
 %
 % 2016-11-18: Created by Sam NH
 %
@@ -21,61 +21,71 @@ function r = normalized_correlation_within_folds(...
 % pearson (default)
 % 
 % 2017-03-15: Streamlined code, added a new correlation_type (variance-sensitive)
+% 
+% 2017-03-31: Further streamlined, made z-averaging an option, and also made it
+% an option as to whether to average correlation metrics before combining them
 
-if nargin < 4
-    metric = 'pearson';
-end
-
-if nargin < 5
-    throw_warning = true;
-end
+I.metric = 'pearson';
+I.z_averaging = true;
+I.average_before_combining_terms = true;
+I = parse_optInputs_keyvalue(varargin, I);
 
 % order folds
 [~,~,folds] = unique(folds(:));
 n_folds = max(folds);
 
+% whether or not to use z-averaging
+if I.z_averaging
+    averaging_func = @(a)tanh(mean(atanh(a(:))));
+else
+    averaging_func = @(a)mean(a(:));
+end
+
+% three correlation metrics for each fold
 rXX = nan(n_folds,1);
 rYY = nan(n_folds,1);
 rXY = nan(n_folds,1);
-
 for i = 1:n_folds
     
-    switch metric
+    switch I.metric
         case {'pearson', 'r2'}
             similarity_func = @nancorr;
         case {'rank', 'rank-r2'}
             similarity_func = @nanrankcorr;
-        case 'demeaned-squared-error'
-            similarity_func = @nancorr_variance_sensitive;
         otherwise
-            keyboard;
             error('No matching case');
     end
     
-    averaging_func = @(a,k)tanh(mean(atanh(mytril(a,k))));
-    
     xi = i == folds;
-    rXX(i) = averaging_func( similarity_func(X(xi,:), X(xi,:)), -1);
-    rYY(i) = averaging_func( similarity_func(Y(xi,:), Y(xi,:)), -1);
-    rXY(i) = averaging_func( similarity_func(X(xi,:), Y(xi,:)), 0);
+    
+    R = similarity_func(X(xi,:), X(xi,:));
+    rXX(i) = averaging_func(R(~eye(size(R))));
+    
+    R = similarity_func(Y(xi,:), Y(xi,:));
+    rYY(i) = averaging_func(R(~eye(size(R))));
+    
+    R = similarity_func(X(xi,:), Y(xi,:));
+    rXY(i) = averaging_func(R(:));
     
 end
 
-if mean(rXX) <= 0 || mean(rYY) <=0
-    if throw_warning
-        warning('Average test-retest r < 0');
+if I.average_before_combining_terms
+    rXX = averaging_func(rXX);
+    rYY = averaging_func(rYY);
+    rXY = averaging_func(rXY);
+    if rXX <= 0 || rYY <=0
+        r = NaN;
+    else
+        r = rXY / (sqrt(rXX) * sqrt(rYY));
     end
-    r = NaN;
-    return;
+else
+    if any(rXX <= 0) || any(rYY <=0)
+        r = NaN;
+    else
+        r = mean(rXY ./ (sqrt(rXX) .* sqrt(rYY)));
+    end
 end
 
-r = mean(rXY) / (sqrt(mean(rXX)) * sqrt(mean(rYY)));
-if any(strcmp(metric, {'r2', 'demeaned-squared-error', 'rank-r2'}))
+if any(strcmp(I.metric, {'r2', 'rank-r2'}))
     r = sign_and_square(r);
 end
-
-function Y = mytril(Y,k)
-
-Y = Y(logical(tril(ones(size(Y)),k)));
-
-

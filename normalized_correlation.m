@@ -1,4 +1,4 @@
-function [normalized_r, normalized_r2] = normalized_correlation(X,Y)
+function [normalized_r, normalized_r2, rx, ry, rxy] = normalized_correlation(X,Y,varargin)
 % Computes the correlation between two random variables normalized by the reliability of the two variables. 
 % The normalized correlation is equal to corr(x,y) / sqrt(corr(x,x) * corr(y,y));
 % 
@@ -24,6 +24,9 @@ function [normalized_r, normalized_r2] = normalized_correlation(X,Y)
 % 
 % 2016-10-28: corr to nancorr to allow for NaN inputs
 
+I.z_average = true;
+I = parse_optInputs_keyvalue(varargin, I);
+
 % dimensions of input matrices
 nx = size(X,2);
 ny = size(Y,2);
@@ -31,14 +34,22 @@ ny = size(Y,2);
 % test-retest correlation
 if ny > 1
     ry = nancorr(Y);
-    ry = tanh(mean(atanh(ry(~eye(ny))))); % z-average off-diagonal elements
+    if I.z_average
+        ry = tanh(mean(atanh(ry(~eye(ny))))); % z-average off-diagonal elements
+    else
+        ry = mean(ry(~eye(ny))); % z-average off-diagonal elements
+    end
 else
     ry = 1;
 end
 
 if nx > 1
     rx = nancorr(X);
-    rx = tanh(mean(atanh(rx(~eye(nx))))); % z-average off-diagonal elements
+    if I.z_average
+        rx = tanh(mean(atanh(rx(~eye(nx))))); % z-average off-diagonal elements
+    else
+        rx = mean(rx(~eye(nx))); % z-average off-diagonal elements
+    end
 else
     rx = 1;
 end
@@ -52,7 +63,11 @@ end
 
 % correlation between measures
 rxy = nancorr(X,Y);
-rxy = tanh(mean(atanh(rxy(:)))); % z-average all pairs
+if I.z_average
+    rxy = tanh(mean(atanh(rxy(:)))); % z-average all pairs
+else
+    rxy = mean(rxy(:)); % z-average all pairs
+end
 
 % normalized correlation
 normalized_r = rxy / sqrt(rx*ry);
