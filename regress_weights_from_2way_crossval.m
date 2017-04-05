@@ -1,9 +1,8 @@
-function [B, best_K, mse, r, mse_bestK] = ...
-    regress_weights_from_2way_crossval(F, Y, folds, method, ...
-    K, std_feats, groups, demean_feats)
+function [B, best_K, mse, r, norm_mse] = ...
+    regress_weights_from_2way_crossval(F, Y, varargin)
 
 % [B, best_K, mse, r] = ...
-%   regress_weights_from_2way_crossval(F, Y, folds, method, K, std_feats, groups)
+%   regress_weights_from_2way_crossval(F, Y, varargin)
 %
 % Estimates regression weights using regularized, cross-validatd regression.
 % Available methods include 'ridge', 'pls', 'lasso', 'pcreg' (principal
@@ -16,6 +15,10 @@ function [B, best_K, mse, r, mse_bestK] = ...
 % F: [sample x dimension] feature matrix
 %
 % Y: [sample x D] data matrix
+% 
+% -- Optional Inputs -- 
+% 
+% optional inputs are specified as name-value pairs: (..., 'NAME', VALUE, ...)
 %
 % folds: number of folds if scalar (default is 10), or alternatively a vector
 % of size equal to the number of samples that indicates which fold each sample
@@ -34,6 +37,11 @@ function [B, best_K, mse, r, mse_bestK] = ...
 % group vector is specified, then the features are normalized such that the
 % features of each group have the same overall power. This can be useful if
 % there are many more features in one group than another.
+% 
+% crossval_metric: metric used to select the desired reguralization paramter.
+% Options are mean squared error ('unnormalized-squared-error' the default),
+% pearson correlation coefficient ('pearson'), or a normalized version of the
+% squared error that is similar to a correlation ('demeaned-squared-error').
 %
 % -- Worked Example --
 %
@@ -44,12 +52,13 @@ function [B, best_K, mse, r, mse_bestK] = ...
 % F = randn(N, P);
 % w = randn(P, 1);
 % y = F * w + sig * randn(N,1);
-%
+% 
 % % least-squares weights
 % folds = 10;
 % [b, ~, ls_mse] = ...
-%     regress_weights_from_2way_crossval(F, y, folds, 'least-squares');
-%
+%     regress_weights_from_2way_crossval(F, y, ...
+%     'folds', folds, 'method', 'least-squares');
+% 
 % % plot least-squares weights
 % b = pinv([ones(N,1), F]) * y;
 % figure;
@@ -59,12 +68,12 @@ function [B, best_K, mse, r, mse_bestK] = ...
 % xlabel('True Weights'); ylabel('Estimated Weights');
 % title('Least Squares');
 % drawnow;
-%
+% 
 % % regularized methods
 % methods = {'ridge', 'pls', 'lasso'};
-%
+% 
 % for i = 1:length(methods);
-%
+%     
 %     % regularizatio parameter K (i.e. lambda for ridge)
 %     switch methods{i}
 %         case 'ridge'
@@ -74,12 +83,13 @@ function [B, best_K, mse, r, mse_bestK] = ...
 %         case 'lasso'
 %             K = 2.^(-20:20);
 %     end
-%
+%     
 %     % 10-fold ridge regression
 %     folds = 10;
 %     [b, best_K, mse] = ...
-%         regress_weights_from_2way_crossval(F, y, folds, methods{i}, K);
-%
+%         regress_weights_from_2way_crossval(F, y, ...
+%         'folds', folds, 'method', methods{i}, 'K', K);
+%     
 %     % plot weights
 %     figure;
 %     plot(w, b(2:end), 'o');
@@ -88,7 +98,7 @@ function [B, best_K, mse, r, mse_bestK] = ...
 %     xlabel('True Weights'); ylabel('Estimated Weights');
 %     title(methods{i});
 %     drawnow;
-%
+%     
 %     % MSE vs. regularization parameter
 %     figure; hold on;
 %     if log10(range(K)) > 3
@@ -105,7 +115,7 @@ function [B, best_K, mse, r, mse_bestK] = ...
 %     legend([h1, h2], {'Mean MSE across Folds', 'Least Squares Baseline'});
 %     title(methods{i});
 %     drawnow;
-%
+%     
 % end
 %
 % 2016-11-30: Modified to use a faster ridge code (see ridge_via_svd.m), Sam NH
@@ -118,78 +128,72 @@ function [B, best_K, mse, r, mse_bestK] = ...
 % to specify the number of components to use per group, and now instead just
 % fix the overall power of the features in each group. Sam NH
 %
-% 2016-01-10 - Made it possible to NOT demean the features and data
+% 2017-01-10 Made it possible to NOT demean the features and data
+% 
+% 2017-04-05 Made it possible to choose a desired metric to assess
+% cross-validated performance instead of just using the MSE.
+% 
+% 2017-04-05/06 Changed how optional inputs are handled
 
 % dimensions of feature matrix
-[N,P] = size(F);
+[n_samples, n_features] = size(F);
 
 % check dimensions of Y and F match
-assert(size(Y,1) == N);
-D = size(Y,2);
+assert(size(Y,1) == n_samples);
+n_data_vecs = size(Y,2);
 
-% number of folds
-if nargin < 3 || isempty(folds)
-    folds = 10;
-end
+% optional arguments
+I.folds = 5;
+I.method = 'ridge';
+I.K = [];
+I.std_feats = true;
+I.groups = ones(1, n_features);
+I.demean_feats = true;
+I.crossval_metric = 'unnormalized-squared-error';
+I.warning = true;
+I = parse_optInputs_keyvalue(varargin, I);
 
-% ridge is the default method
-if nargin < 4 || isempty(method)
-    method = 'ridge';
-end
-
-% default range of regularization parameters
-if nargin < 5 || isempty(K)
-    switch method
+% regularization parameter
+if isempty(I.K)
+    switch I.method
         case 'least-squares'
-            K = [];
+            I.K = [];
         case 'ridge'
-            K = 2.^(-30:30);
+            I.K = 2.^(-100:100);
         case 'pls'
-            K = 1:round(P/3);
+            I.K = 1:round(n_features/3);
         case 'pcreg'
-            K = 1:round(P/3);
+            I.K = 1:round(n_features/3);
         case 'lasso'
-            K = 2.^(-20:20);
+            I.K = 2.^(-100:100);
         otherwise
-            error('No valid method for %s\n', method);
+            error('No valid method for %s\n', I.method);
     end
 end
 
-% by default standardize features
-if nargin < 6 || isempty(std_feats)
-    std_feats = true;
-end
-
 % groups
-if nargin < 7 || isempty(groups)
-    groups = ones(1,P);
-end
-groups = groups(:)';
-n_groups = max(groups);
-assert(all((1:n_groups) == unique(groups)));
-assert(length(groups) == P);
+I.groups = I.groups(:)';
+n_groups = max(I.groups);
+assert(all((1:n_groups) == unique(I.groups)));
+assert(length(I.groups) == n_features);
 
-if nargin < 8 || isempty(demean_feats)
-    demean_feats = true;
-end
-
-if isscalar(folds)
-    n_folds = folds;
-    fold_indices = subdivide(N, folds);
-    clear folds;
+% folds
+if isscalar(I.folds)
+    n_folds = I.folds;
+    fold_indices = subdivide(n_samples, I.folds);
 else
-    assert(isvector(folds));
-    [~,~,fold_indices] = unique(folds(:));
+    assert(isvector(I.folds));
+    [~,~,fold_indices] = unique(I.folds(:));
     n_folds = max(fold_indices);
-    clear folds;
 end
 
 % number of components to test
-n_K = length(K);
+n_K = length(I.K);
 
 % calculate predictions
-mse = nan(n_folds, max(n_K,1), D);
-r = nan(n_folds, max(n_K,1), D);
+mse = nan(n_folds, max(n_K, 1), n_data_vecs);
+r = nan(n_folds, max(n_K, 1), n_data_vecs);
+norm_mse = nan(n_folds, max(n_K, 1), n_data_vecs);
 for test_fold = 1:n_folds
     
     % train and testing folds
@@ -197,22 +201,23 @@ for test_fold = 1:n_folds
     train_fold_indices = ~test_fold_indices;
     
     % concatenate training data
-    y_train = Y(train_fold_indices,:);
-    F_train = F(train_fold_indices,:);
+    y_train = Y(train_fold_indices, :);
+    F_train = F(train_fold_indices, :);
     clear train_fold_indices;
     
     % format features and compute svd
     [U, s, V, mF, normF] = svd_for_regression(...
-        F_train, std_feats, demean_feats, groups);
+        F_train, I.std_feats, I.demean_feats, I.groups);
     clear F_train;
     
     % prediction from test features
     F_test = F(test_fold_indices, :);
     F_test = [ones(size(F_test, 1), 1), F_test]; %#ok<AGROW>
-    for i = 1:D
+    for i = 1:n_data_vecs
         
         % estimate weights from training data
-        B = regress_weights(y_train(:,i), U, s, V, mF, normF, method, K, demean_feats);
+        B = regress_weights(y_train(:,i), U, s, V, ...
+            mF, normF, I.method, I.K, I.demean_feats);
         
         % test data
         yh = F_test * B;
@@ -222,6 +227,8 @@ for test_fold = 1:n_folds
         err = bsxfun(@minus, yh, Y(test_fold_indices,i));
         mse(test_fold,:,i) = nanmean(err.^2, 1);
         r(test_fold,:,i) = nancorr(yh, Y(test_fold_indices,i));
+        norm_mse(test_fold,:,i) = ...
+            nancorr_variance_sensitive_symmetric(yh, Y(test_fold_indices,i));
         clear yh err;
         
     end
@@ -230,85 +237,43 @@ for test_fold = 1:n_folds
     
 end
 
-if strcmp(method, 'least-squares')
-    best_K = nan(1,D);
-    mse_bestK = nan(1,D);
+switch I.crossval_metric
+    case 'pearson'
+        stat = r;
+    case 'unnormalized-squared-error'
+        stat = -mse;
+    case 'demeaned-squared-error'
+        stat = norm_mse;
+    otherwise
+        error('No matching case for crossval_metric %s\n', I.crossval_metric);
+end
+
+if strcmp(I.method, 'least-squares')
+    best_K = nan(1, n_data_vecs);
 else
-    best_K = nan(1,D);
-    mse_bestK = nan(1,D);
-    for i = 1:D
+    best_K = nan(1, n_data_vecs);
+    for i = 1:n_data_vecs
         % best regularization value
-        [~, best_K_index] = min( mean(mse(:,:,i), 1), [], 2 );
-        best_K(i) = K(best_K_index);
-        mse_bestK(i) = mean(mse(:, best_K_index,i));
+        [~, best_K_index] = max(mean(stat(:,:,i), 1), [], 2);
+        best_K(i) = I.K(best_K_index);
         
         % check if the best regularizer is on the boundary
-        if strcmp(method, 'ridge') && (best_K_index == 1 || best_K_index == n_K)
-            warning('Best regularizer is on the boundary of possible values\nK=%f', best_K(i));
-        elseif strcmp(method, 'pls') && best_K_index == n_K
-            warning('Best regularizer is on the boundary of possible values\nK=%f', best_K(i));
+        if I.warning
+            if strcmp(I.method, 'ridge') && (best_K_index == 1 || best_K_index == n_K)
+                warning('Best regularizer is on the boundary of possible values\nK=%f', best_K(i));
+            elseif strcmp(I.method, 'pls') && best_K_index == n_K
+                warning('Best regularizer is on the boundary of possible values\nK=%f', best_K(i));
+            end
         end
     end
 end
 
 % estimate weights using all of the data
-[U, s, V, mF, normF] = svd_for_regression(F, std_feats, demean_feats, groups);
-B = nan(P+1, D);
-for i = 1:D
-    B(:,i) = regress_weights(Y(:,i), U, s, V, mF, normF, method, best_K(i), demean_feats);
+[U, s, V, mF, normF] = svd_for_regression(F, I.std_feats, I.demean_feats, I.groups);
+B = nan(n_features+1, n_data_vecs);
+for i = 1:n_data_vecs
+    B(:,i) = regress_weights(Y(:,i), U, s, V, mF, normF, I.method, best_K(i), I.demean_feats);
 end
 clear U s V mF normF;
 
-function B = regress_weights(y, U, s, V, mF, normF, method, K, demean_feats)
 
-% check there are no NaNs
-assert(all(~isnan(y)));
-
-% de-mean data
-if demean_feats
-    ym = y-mean(y);
-else
-    ym = y;
-end
-
-% weights using all of the data
-switch method
-    case 'least-squares'
-        B = V * ((1./s) .* (U' * ym));
-        
-    case 'pcreg' % principal components regression
-        n_K = length(K);
-        B = nan(size(V,1), n_K);
-        for j = 1:n_K
-            B(:,j) = V(:,1:K(j)) * ((1./s(1:K(j))) .* (U(:,1:K(j))' * ym));
-        end
-        
-    case 'ridge'
-        B = ridge_via_svd(ym, U, s, V, K);
-        
-    case 'pls'
-        n_K = length(K);
-        B = nan(size(U,2)+1, n_K);
-        for j = 1:n_K
-            Z = bsxfun(@times, U, s');
-            [~,~,~,~,B(:,j)] = plsregress(Z, ym, K(j));
-        end
-        B = B(2:end,:);
-        B = V * B;
-        
-    case 'lasso'
-        B = lasso(U * diag(s) * V', ym, 'Lambda', K, 'Standardize', false);
-        
-    otherwise
-        error('No valid method for %s\n', method);
-end
-
-% rescale weights to remove effect of normalization
-B = bsxfun(@times, B, 1./normF');
-
-% add ones regressor
-if demean_feats
-    B = [mean(y) - mF * B; B];
-else
-    B = [zeros(1,size(B,2)); B];
-end

@@ -1,6 +1,5 @@
 function [Yh, mse, r, test_fold_indices, B] = ...
-    regress_predictions_from_3way_crossval(F, Y, test_folds, method, K, ...
-    train_folds, MAT_file, std_feats, groups)
+    regress_predictions_from_3way_crossval(F, Y, varargin)
 
 % Calculates predictions from using a 3-way cross-validated regression. The data
 % is first split into two folds, test and training. The weights of the
@@ -18,6 +17,10 @@ function [Yh, mse, r, test_fold_indices, B] = ...
 %
 % Y: [sample x D] data matrix
 %
+% -- Optional Inputs -- 
+% 
+% optional inputs are specified as name-value pairs: (..., 'NAME', VALUE, ...)
+% 
 % test_folds: number of folds to use for the first split into training and test
 % data if scalar (default is 10), or alternatively a vector of size equal to
 % the number of samples that indicates which fold each sample belongs to (e.g.
@@ -44,25 +47,31 @@ function [Yh, mse, r, test_fold_indices, B] = ...
 % features of each group have the same overall power. This can be useful if
 % there are many more features in one group than another.
 %
+% crossval_metric: metric used to select the desired reguralization paramter.
+% Options are mean squared error ('unnormalized-squared-error' the default),
+% pearson correlation coefficient ('pearson'), or a normalized version of the
+% squared error that is similar to a correlation ('demeaned-squared-error').
+% 
 % -- Worked Example --
 %
-% % features, weights and noisy data
 % N = 100;
 % P = 100;
 % sig = 3;
 % F = randn(N, P);
 % w = randn(P, 1);
 % y = F * w + sig * randn(N,1);
-%
+% 
 % % least-squares baseline
 % folds = 10;
 % [ls_yh, ls_mse] = ...
-%     regress_predictions_from_3way_crossval(F, y, folds, 'least-squares');
-%
+%     regress_predictions_from_3way_crossval(F, y, ...
+%     'test_folds', folds, 'train_folds', folds, 'method', 'least-squares');
+% 
 % % ridge
 % [ridge_yh, ridge_mse] = ...
-%     regress_predictions_from_3way_crossval(F, y, folds, 'ridge', 2.^(-30:30));
-%
+%     regress_predictions_from_3way_crossval(F, y, ...
+%     'test_folds', folds, 'train_folds', 10, 'method', 'ridge', 'K', 2.^(-30:30));
+% 
 % % compare MSE for least-squares and ridge
 % figure;
 % plot(ls_mse, ridge_mse, 'o');
@@ -78,78 +87,81 @@ function [Yh, mse, r, test_fold_indices, B] = ...
 % matrix, which only needs to be done once. Removed parameter that allowed one
 % to specify the number of components to use per group, and now instead just
 % fix the overall power of the features in each group. Sam NH
+% 
+% 2017-04-05 Made it possible to choose a desired metric to assess
+% cross-validated performance instead of just using the MSE.
+% 
+% 2017-04-05/06 Changed how optional inputs are handled
 
 % dimensions of feature matrix
-[N,P] = size(F);
+[n_samples, n_features] = size(F);
 
 % check y is a column vector and dimensions match the feature matrix
-assert(size(Y,1) == N);
+assert(size(Y,1) == n_samples);
 
-% number of folds
-if nargin < 3 || isempty(test_folds)
-    test_folds = N;
-end
+I.test_folds = 2;
+I.train_folds = 2;
+I.K = [];
+I.method = 'ridge';
+I.std_feats = true;
+I.groups = ones(1, n_features);
+I.demean_feats = true;
+I.crossval_metric = 'unnormalized-squared-error';
+I.warning = true;
+I.MAT_file = [];
+I = parse_optInputs_keyvalue(varargin, I);
 
-% ridge is the default method
-if nargin < 4 || isempty(method)
-    method = 'ridge';
-end
-
-% default range of regularization parameters
-if nargin < 5 || isempty(K)
-    switch method
+% regularization parameter
+if isempty(I.K)
+    switch I.method
         case 'least-squares'
-            K = [];
+            I.K = [];
         case 'ridge'
-            K = 2.^(-30:30);
+            I.K = 2.^(-100:100);
         case 'pls'
-            K = 1:round(P/3);
+            I.K = 1:round(n_features/3);
+        case 'pcreg'
+            I.K = 1:round(n_features/3);
         case 'lasso'
-            K = 2.^(-20:20);
+            I.K = 2.^(-100:100);
         otherwise
-            error('No valid method for %s\n', method);
+            error('No valid method for %s\n', I.method);
     end
 end
 
-if nargin < 8 || isempty(std_feats)
-    std_feats = true;
-end
-
-% by assign everything to the same group
-if nargin < 9
-    groups = [];
-end
+% groups
+I.groups = I.groups(:)';
+n_groups = max(I.groups);
+assert(all((1:n_groups) == unique(I.groups)));
+assert(length(I.groups) == n_features);
 
 % divide signal into folds
-if isscalar(test_folds)
-    n_folds = test_folds;
-    test_fold_indices = subdivide(N, test_folds);
-    clear test_folds;
+if isscalar(I.test_folds)
+    n_folds = I.test_folds;
+    test_fold_indices = subdivide(n_samples, I.test_folds);
 else
-    assert(isvector(test_folds));
-    [~,~,test_fold_indices] = unique(test_folds(:));
+    assert(isvector(I.test_folds));
+    [~,~,test_fold_indices] = unique(I.test_folds(:));
     n_folds = max(test_fold_indices);
     clear folds;
 end
 
 % calculate predictions
-D = size(Y,2);
-r = nan(n_folds, D);
-Yh = nan(N, D);
-if nargout >=5; B = nan(P, D, n_folds); end
+n_data_vecs = size(Y,2);
+r = nan(n_folds, n_data_vecs);
+Yh = nan(n_samples, n_data_vecs);
+if nargout >=5; B = nan(n_features, n_data_vecs, n_folds); end
 for test_fold = 1:n_folds
     
     % train and testing folds
     test_samples = test_fold_indices == test_fold;
     
     % within training data divide into folds
-    if nargin < 6
-        train_fold_indices = test_fold_indices(~test_samples);
-    elseif isscalar(train_folds)
-        train_fold_indices = train_folds;
-    elseif isvector(train_folds)
-        assert(length(train_folds) == N);
-        train_fold_indices = train_folds(~test_samples);
+    if isscalar(I.train_folds)
+        train_fold_indices = I.train_folds;
+    elseif isvector(I.train_folds)
+        assert(length(I.train_folds) == n_samples);
+        train_fold_indices = I.train_folds(~test_samples);
     else
         error('Failed all conditionals');
     end
@@ -158,17 +170,19 @@ for test_fold = 1:n_folds
     F_train = F(~test_samples,:);
     y_train = Y(~test_samples,:);
     
-    if strcmp(method, 'least-squares')
-        B_train = nan(P+1,D);
-        for i = 1:D
+    if strcmp(I.method, 'least-squares')
+        B_train = nan(n_features+1,n_data_vecs);
+        for i = 1:n_data_vecs
             xi = ~isnan(y_train(:,i));
             B_train(:,i) = pinv([ones(sum(xi),1), F_train(xi,:)])*y_train(xi,i);
         end
     else
         % estimate regression weights using 2-way cross validation on training set
         B_train = regress_weights_from_2way_crossval(...
-            F_train, y_train, train_fold_indices, method, K, ...
-            std_feats, groups);
+            F_train, y_train, 'folds', train_fold_indices, 'method', I.method, ...
+            'K', I.K, 'std_feats', I.std_feats, 'groups', I.groups, ...
+            'demean_feats', I.demean_feats, 'crossval_metric', I.crossval_metric, ...
+            'warning', I.warning);
     end
     
     % prediction from test features
@@ -188,8 +202,8 @@ end
 
 mse = nanmean((Yh-Y).^2, 1);
 
-if nargin >= 7 && ~isempty(MAT_file)
-    save(MAT_file, 'Yh', 'mse', 'r', 'test_fold_indices');
+if ~isempty(I.MAT_file)
+    save(I.MAT_file, 'Yh', 'mse', 'r', 'test_fold_indices');
 end
 
 
