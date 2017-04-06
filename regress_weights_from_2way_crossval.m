@@ -254,7 +254,7 @@ else
     best_K = nan(1, n_data_vecs);
     for i = 1:n_data_vecs
         % best regularization value
-        [~, best_K_index] = max(mean(stat(:,:,i), 1), [], 2);
+        [~, best_K_index] = nanmax(nanmean(stat(:,:,i), 1), [], 2);
         best_K(i) = I.K(best_K_index);
         
         % check if the best regularizer is on the boundary

@@ -144,10 +144,10 @@ switch I.correction_method
         switch I.metric
             case 'pearson'
                 r = XYcov ./ sqrt(Xvar .* Yvar);
-                r(Xvar < 0 | Yvar < 0) = NaN;
+                r(Xvar < 1e-10 | Yvar < 1e-10) = NaN;
             case 'demeaned-squared-error'
                 r = XYcov ./ ((Xvar + Yvar)/2);
-                r((Xvar + Yvar) < 0) = NaN;
+                r((Xvar + Yvar) < 1e-10) = NaN;
             case 'unnormalized-squared-error'
                 r = Xvar + Yvar - 2*XYcov;
                 r = -r;
@@ -173,7 +173,7 @@ best_K = nan(1,n_data_vecs);
 r_bestK = nan(1,n_data_vecs);
 for i = 1:n_data_vecs
     % best regularization value
-    [~, best_K_index] = max(r(:,i));
+    [~, best_K_index] = nanmax(r(:,i));
     best_K(i) = I.K(best_K_index);
     r_bestK(i) = r(best_K_index, i);
     
