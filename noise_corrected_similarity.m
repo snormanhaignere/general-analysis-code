@@ -161,8 +161,10 @@ switch I.metric
             % r = 1 - (Xvar + Yvar - 2*XYcov) / (Xvar + Yvar);
             r = XYcov / ((Xvar + Yvar)/2);
         end
+    case 'unnormalized-squared-error'
+        r = Xvar + Yvar - 2*XYcov;
     otherwise
-        error('No matching case for metric %s\n', metric);
+        error('No matching case for metric %s\n', I.metric);
 end
 
 % check r is real
