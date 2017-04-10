@@ -101,33 +101,15 @@ assert(size(Y,1) == n_samples);
 
 I.test_folds = 2;
 I.train_folds = 2;
-I.K = [];
 I.method = 'ridge';
+I.K = [];
 I.std_feats = true;
 I.groups = ones(1, n_features);
 I.demean_feats = true;
-I.crossval_metric = 'unnormalized-squared-error';
+I.regularization_metric = 'unnormalized-squared-error';
 I.warning = true;
-I.MAT_file = [];
+I.MAT_file = '';
 I = parse_optInputs_keyvalue(varargin, I);
-
-% regularization parameter
-if isempty(I.K)
-    switch I.method
-        case 'least-squares'
-            I.K = [];
-        case 'ridge'
-            I.K = 2.^(-100:100);
-        case 'pls'
-            I.K = 1:round(n_features/3);
-        case 'pcreg'
-            I.K = 1:round(n_features/3);
-        case 'lasso'
-            I.K = 2.^(-100:100);
-        otherwise
-            error('No valid method for %s\n', I.method);
-    end
-end
 
 % groups
 I.groups = I.groups(:)';
@@ -181,7 +163,8 @@ for test_fold = 1:n_folds
         B_train = regress_weights_from_2way_crossval(...
             F_train, y_train, 'folds', train_fold_indices, 'method', I.method, ...
             'K', I.K, 'std_feats', I.std_feats, 'groups', I.groups, ...
-            'demean_feats', I.demean_feats, 'crossval_metric', I.crossval_metric, ...
+            'demean_feats', I.demean_feats, ...
+            'regularization_metric', I.regularization_metric, ...
             'warning', I.warning);
     end
     

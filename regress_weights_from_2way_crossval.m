@@ -38,7 +38,7 @@ function [B, best_K, mse, r, norm_mse] = ...
 % features of each group have the same overall power. This can be useful if
 % there are many more features in one group than another.
 % 
-% crossval_metric: metric used to select the desired reguralization paramter.
+% regularization_metric: metric used to select the desired reguralization paramter.
 % Options are mean squared error ('unnormalized-squared-error' the default),
 % pearson correlation coefficient ('pearson'), or a normalized version of the
 % squared error that is similar to a correlation ('demeaned-squared-error').
@@ -149,7 +149,7 @@ I.K = [];
 I.std_feats = true;
 I.groups = ones(1, n_features);
 I.demean_feats = true;
-I.crossval_metric = 'unnormalized-squared-error';
+I.regularization_metric = 'unnormalized-squared-error';
 I.warning = true;
 I = parse_optInputs_keyvalue(varargin, I);
 
@@ -237,7 +237,7 @@ for test_fold = 1:n_folds
     
 end
 
-switch I.crossval_metric
+switch I.regularization_metric
     case 'pearson'
         stat = r;
     case 'unnormalized-squared-error'

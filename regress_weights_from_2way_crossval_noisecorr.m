@@ -17,7 +17,7 @@ I.warning = true;
 I.std_feats = true;
 I.groups = ones(1, n_features);
 I.demean_feats = true;
-I.metric = 'demeaned-squared-error';
+I.regularization_metric = 'demeaned-squared-error';
 I.correction_method = 'variance-based';
 I = parse_optInputs_keyvalue(varargin, I);
 
@@ -109,15 +109,15 @@ for test_fold = 1:n_folds
             
         end
         
-        % compute metric used to choose regularization parameter
+        % compute regularization_metric used to choose regularization parameter
         for j = 1:n_K
             switch I.correction_method
                 case 'variance-based'
                     [~, Xvar(test_fold, j, i), Yvar(test_fold, j, i), XYcov(test_fold, j, i)] = ...
                         noise_corrected_similarity( Y(test_fold_indices,:,i), Yh(:,:,j), ...
-                        'metric', I.metric);
+                        'metric', I.regularization_metric);
                 case 'correlation-based'
-                    assert(strcmp(I.metric, 'pearson'));
+                    assert(strcmp(I.regularization_metric, 'pearson'));
                     [~, ~, Rx(test_fold, j, i), Ry(test_fold, j, i), Rxy(test_fold, j, i)] = ...
                         normalized_correlation(Y(test_fold_indices,:,i), Yh(:,:,j), ...
                         'z_average', false, 'warning', false);
@@ -141,7 +141,7 @@ switch I.correction_method
         Xvar = squeeze_dims(mean(Xvar,1),1);
         Yvar = squeeze_dims(mean(Yvar,1),1);
         XYcov = squeeze_dims(mean(XYcov,1),1);
-        switch I.metric
+        switch I.regularization_metric
             case 'pearson'
                 r = XYcov ./ sqrt(Xvar .* Yvar);
                 r(Xvar < 1e-10 | Yvar < 1e-10) = NaN;
@@ -152,18 +152,20 @@ switch I.correction_method
                 r = Xvar + Yvar - 2*XYcov;
                 r = -r;
             otherwise
-                error('No matching case for metric %s\n', I.metric);
+                error('No matching case for regularization_metric %s\n', ...
+                    I.regularization_metric);
         end
     case 'correlation-based'
         Rx = squeeze_dims(mean(Rx,1),1);
         Ry = squeeze_dims(mean(Ry,1),1);
         Rxy = squeeze_dims(mean(Rxy,1),1);
-        switch I.metric
+        switch I.regularization_metric
             case 'pearson'
                 r = mean(Rxy ./ (sqrt(Rx) .* sqrt(Ry)));
                 r(Rx < 0 | Ry < 0) = NaN;
             otherwise
-                error('No matching case for metric %s\n', I.metric);
+                error('No matching case for regularization_metric %s\n', ...
+                    I.regularization_metric);
         end
     otherwise
         error('Switch statement fell through');

@@ -17,9 +17,10 @@ I.K = [];
 I.std_feats = true;
 I.groups = ones(1, n_features);
 I.demean_feats = true;
-I.metric = 'demeaned-squared-error';
+I.regularization_metric = 'demeaned-squared-error';
 I.correction_method = 'variance-based';
 I.warning = true;
+I.MAT_file = '';
 I = parse_optInputs_keyvalue(varargin, I);
 
 % regularization parameter
@@ -61,6 +62,8 @@ end
 Yh = nan(size(Y));
 for test_fold = 1:n_folds
     
+    fprintf('Test fold %d\n', test_fold); drawnow;
+    
     % train and testing folds
     test_samples = test_fold_indices == test_fold;
     
@@ -88,12 +91,15 @@ for test_fold = 1:n_folds
             end
         end
     else
+        tic;
         % estimate regression weights using 2-way cross validation on training set
         B_train = regress_weights_from_2way_crossval_noisecorr(...
             F_train, Y_train, 'folds', train_fold_indices, 'method', ...
             I.method, 'K', I.K, 'std_feats', I.std_feats, 'groups', I.groups, ...
-            'metric', I.metric, 'correction_method', I.correction_method, ...
+            'regularization_metric', I.regularization_metric, ...
+            'correction_method', I.correction_method, ...
             'warning',  I.warning);
+        toc;
     end
     
     % prediction from test features
@@ -102,6 +108,14 @@ for test_fold = 1:n_folds
     
     % multiply weights from training data against test features
     dims = size(B_train);
-    Yh(test_samples,:,:) = F_test * reshape(B_train, [dims(1), prod(dims(2:end))]);
+    Yh(test_samples,:,:) = reshape(...
+        F_test * reshape(B_train, [dims(1), prod(dims(2:end))]), ...
+        [size(F_test,1), dims(2:end)]);
     
 end
+
+if ~isempty(I.MAT_file)
+    save(I.MAT_file, 'Yh', 'test_fold_indices');
+end
+
+
