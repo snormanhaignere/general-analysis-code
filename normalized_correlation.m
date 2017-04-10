@@ -25,6 +25,7 @@ function [normalized_r, normalized_r2, rx, ry, rxy] = normalized_correlation(X,Y
 % 2016-10-28: corr to nancorr to allow for NaN inputs
 
 I.z_average = true;
+I.warning = true;
 I = parse_optInputs_keyvalue(varargin, I);
 
 % dimensions of input matrices
@@ -54,13 +55,6 @@ else
     rx = 1;
 end
 
-if rx <= 0 || ry <=0
-    warning('Average test-retest r < 0');
-    normalized_r = NaN;
-    normalized_r2 = NaN;
-    return;
-end
-
 % correlation between measures
 rxy = nancorr(X,Y);
 if I.z_average
@@ -68,6 +62,16 @@ if I.z_average
 else
     rxy = mean(rxy(:)); % z-average all pairs
 end
+
+if rx <= 0 || ry <=0
+    if I.warning
+        warning('Average test-retest r < 0');
+    end
+    normalized_r = NaN;
+    normalized_r2 = NaN;
+    return;
+end
+
 
 % normalized correlation
 normalized_r = rxy / sqrt(rx*ry);
