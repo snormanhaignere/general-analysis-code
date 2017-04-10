@@ -16,9 +16,20 @@ assert(size(X,2)>1);
 X = bsxfun(@minus, X, mean(X,1));
 
 % error of the variance, averaged across all samples
-f = @(a,b)var(a-b);
-error_var = nanfunc_all_column_pairs(f, X);
-error_var = mean(error_var(logical(tril(ones(size(X,2)),-1))));
+
+% f = @(a,b)var(a-b);
+% error_var = nanfunc_all_column_pairs(f, X);
+% error_var = mean(error_var(logical(tril(ones(size(X,2)),-1))));
+
+count = 0;
+error_var = 0;
+for i = 1:size(X,2)
+    e = bsxfun(@minus, X(:,i), X(:,i+1:end));
+    error_var = error_var + sum(var(e));
+    count = count + (size(X,2) - i);
+end
+error_var = error_var/count;
+clear e count;
 
 % noise variance is half of the error variance
 noise_var = error_var/2;
@@ -28,3 +39,10 @@ total_var = mean(var(X),2);
 
 % variance of the signal assuming uncorrelated noise
 sig_var = total_var - noise_var;
+
+end
+
+
+% var(X1 - X2) = var(X1) + var(X2) - cov(X1, X2);
+% var(X1 - X2) = 2*(var(X)+var(N)) - var(X)
+% (var(X1) + var(X2)) - var(X1 - X2) = var(X)
