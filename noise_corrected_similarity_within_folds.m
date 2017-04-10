@@ -78,7 +78,7 @@ switch metric
         r = XYcov ./ sqrt(Xvar .* Yvar);
         r(Xvar < 0 | Yvar < 0) = NaN;
     case 'demeaned-squared-error'
-        r = XYcov / ((Xvar + Yvar)/2);
+        r = XYcov ./ ((Xvar + Yvar)/2);
         r((Xvar + Yvar) < 0) = NaN;
     otherwise
         error('No matching case for metric %s\n', metric);
