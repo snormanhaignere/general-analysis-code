@@ -1,4 +1,4 @@
-function Yh = deconv1D_predictions_from_3way_crossval(F, Y, n_delays, folds, method, K, MAT_file)
+function Yh = deconv1D_predictions_from_3way_crossval(F, Y, n_delays, folds, method, K, MAT_file, std_feats, demean_feats)
 
 % feature MAT file
 if ischar(F)
@@ -26,7 +26,7 @@ if nargin < 6
         case 'least-squares'
             K = [];
         case 'ridge'
-            K = 2.^(-30:30);
+            K = 2.^(-100:100);
         case 'pls'
             K = 1:round(P/3);
         case 'lasso'
@@ -39,6 +39,14 @@ end
 % file to save predictions to
 if nargin < 7
     MAT_file = [];
+end
+
+if nargin < 8
+    std_feats = true;
+end
+
+if nargin < 9
+    demean_feats = true;
 end
 
 % unwrap different features
@@ -58,8 +66,9 @@ F_shifted = reshape(F_shifted, [n_smps, n_features * n_delays]);
 % betas
 Yh = nan(size(Y));
 for i = 1:size(Y,2)
-    Yh(:,i) = regress_predictions_from_3way_crossval(F_shifted, ...
-        Y(:,i), folds, method, K);
+    Yh(:,i) = regress_predictions_from_3way_crossval(F_shifted, Y(:,i), ...
+        'test_folds', folds, 'train_folds', folds, 'method', method, 'K', K, ...
+        'std_feats', std_feats, 'demean_feats', demean_feats);
 end
 
 % save results
