@@ -18,3 +18,15 @@ function r = corr_variance_sensitive_symmetric(X,Y)
 X = X - ones(size(X,1),1)*mean(X);
 Y = Y - ones(size(Y,1),1)*mean(Y);
 r = 1 - sum((X-Y).^2) ./ (sum(X.^2) + sum(Y.^2));
+
+% 1 - var(X-Y) / (var(X) + var(Y))
+% 1 - (var(X) + var(Y) - 2*cov(X,Y)) / (var(X) + var(Y))
+% cov(X,Y) / (var(X)/2 + var(Y)/2)
+% 
+% X1 = X + Nx1
+% X2 = X + Nx2
+% Y1 = X + Ny1
+% Y2 = X + Ny2
+% 
+% var(X) = (var(X1)/2 + var(X2)/2) - var(X1-X2)/2
+% var(Y) = (var(Y1)/2 + var(Y2)/2) - var(Y1-Y2)/2
