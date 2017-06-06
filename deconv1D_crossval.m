@@ -81,7 +81,18 @@ function [Yh, B, pred_stats, weight_stats] = ...
 % whether or not to compute predictions and weights
 I.prediction = true;
 I.weights = true;
+
+% value to pad feature matrix with
 I.pad_value = 0;
+
+% whether to perform cross validation over time dimension or the second (e.g.
+% stimulus) dimension when present, default is to do the cross-validation with
+% respect to the "stimulus" dimension when there are at least 3 stimuli present
+if size(Y,2) >= 3
+    I.crossval_dimension = 2;
+else
+    I.crossval_dimension = 1;
+end
 
 % default regression parameters, see regress_predictions_from_3way_crossval
 I.test_folds = 2;
@@ -101,6 +112,12 @@ switch I.regression_method
     otherwise
         error('No valid method for %s\n', method);
 end
+
+% modify parameters based on user input
+I = parse_optInputs_keyvalue(varargin, I);
+
+% check parameters
+assert(any(I.crossval_dimension == [1 2]));
 
 %% Add delays and format the feature and data matrix
 
@@ -129,13 +146,54 @@ assert(size(F_shifted,1) == size(Y,1));
 Y = reshape(Y, Y_dims(1)*Y_dims(2), Y_dims(3));
 assert(size(Y,1) == size(F_shifted,1));
 
+%% Determine folds for cross-validation
+
+% testing fold indices for specified dimension
+if isscalar(I.test_folds)
+    test_fold_indices = subdivide(Y_dims(I.crossval_dimension), I.test_folds);
+else
+    test_fold_indices = I.test_folds;
+    assert(length(test_fold_indices) == Y_dims(I.crossval_dimension));
+end
+
+% train fold indices for specified dimension
+if isscalar(I.train_folds)
+    train_fold_indices = nan(1, Y_dims(I.crossval_dimension));
+    unique_test_indices = unique(test_fold_indices);
+    for i = 1:length(unique_test_indices)
+        xi = test_fold_indices == unique_test_indices(i);
+        train_fold_indices(xi) = subdivide(sum(xi), I.train_folds);
+    end
+else
+    train_fold_indices = I.train_folds;
+    assert(length(train_fold_indices) == Y_dims(I.crossval_dimension));
+end
+
+% copy over other dimension
+if I.crossval_dimension == 2
+    test_fold_indices = repmat(test_fold_indices(:)', Y_dims(1), 1);
+    train_fold_indices = repmat(train_fold_indices(:)', Y_dims(1), 1);
+elseif I.crossval_dimension == 1
+    test_fold_indices = repmat(test_fold_indices(:), 1, Y_dims(2));
+    train_fold_indices = repmat(train_fold_indices(:), 1, Y_dims(2));
+else
+    error('Cross-validation dimension should be 1 or 2');
+end
+
+% check size of the indices
+assert(all(size(test_fold_indices) == Y_dims(1:2)));
+
+% unwrap
+test_fold_indices = test_fold_indices(:);
+train_fold_indices = train_fold_indices(:);
+
 %% Regression analyses
 
 % prediction using 3-fold cross-validation
 if I.prediction
     [Yh, pred_stats.mse, pred_stats.r, pred_stats.test_fold_indices] = ...
         regress_predictions_from_3way_crossval(F_shifted, Y, ...
-        'test_folds', I.test_folds, 'train_folds', I.train_folds, ...
+        'test_folds', test_fold_indices, 'train_folds', train_fold_indices, ...
         'method', I.regression_method, 'K', I.K, ...
         'std_feats', I.std_feats, 'demean_feats', I.demean_feats);
 else
@@ -147,7 +205,7 @@ end
 if I.weights
     [B, weight_stats.best_K, weight_stats.mse, ...
         weight_stats.r, weight_stats.norm_mse] = ...
-        regress_weights_from_2way_crossval(F_shifted, Y, 'folds', I.test_folds, ...
+        regress_weights_from_2way_crossval(F_shifted, Y, 'folds', I.test_folds(:), ...
         'method', I.regression_method, 'K', I.K, ...
         'std_feats', I.std_feats, 'demean_feats', I.demean_feats);
     
