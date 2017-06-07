@@ -132,7 +132,7 @@ end
 n_data_vecs = size(Y,2);
 r = nan(n_folds, n_data_vecs);
 Yh = nan(n_samples, n_data_vecs);
-if nargout >=5; B = nan(n_features, n_data_vecs, n_folds); end
+if nargout >=5; B = nan(n_features+1, n_data_vecs, n_folds); end
 for test_fold = 1:n_folds
     
     % train and testing folds
