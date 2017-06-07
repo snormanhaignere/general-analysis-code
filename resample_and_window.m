@@ -6,30 +6,30 @@ function Y = resample_and_window(X, orig_win, orig_sr, targ_win, targ_sr)
 % array, in which case only resampling and windowing is performed over the first
 % (row) dimension. The target window must be contained within the original
 % window. Missing NaN values are filled in via interpolation.
-% 
+%
 % This function relies on resample, resample_ndarray, and interp1.
-% 
+%
 % -- Simple Example --
-% 
+%
 % % create a signal
 % orig_sr = 100;
 % orig_win = [0, orig_sr]/orig_sr;
 % X = randn(orig_sr+1, 1);
-% 
+%
 % % add some NaN values to demonstrate filling in
 % X(rand(size(X)) < 0.2) = NaN;
-% 
-% % downsample 
+%
+% % downsample
 % targ_sr = 50;
 % targ_win = [0.25 0.75];
 % X_resamp = resample_and_window(X, orig_win, orig_sr, targ_win, targ_sr);
-% 
+%
 % % plot
 % figure;
 % hold on;
 % plot(orig_win(1) : 1/orig_sr : orig_win(2), X);
 % plot(targ_win(1) : 1/targ_sr : targ_win(2), X_resamp);
-% 
+%
 % 2017-06-06: Created, Sam NH
 
 % unwrap all but first dimension
@@ -45,9 +45,13 @@ assert(yi(1) >= xi(1) && yi(end) <= xi(end));
 Y = nan([length(yi), size(X,2)]);
 
 % interpolate columns without NaN
-no_NaNs = all(~isnan(X));
-if sum(no_NaNs)>0
-    Y(:,no_NaNs) = interp1(xi', X(:,no_NaNs), yi', 'pchip');
+try
+    no_NaNs = all(~isnan(X));
+    if sum(no_NaNs)>0
+        Y(:,no_NaNs) = interp1(xi', X(:,no_NaNs), yi', 'pchip');
+    end
+catch
+    keyboard
 end
 
 % interpolate columns with NaNs
@@ -57,7 +61,7 @@ for zi = find(~no_NaNs)
 end
 assert(all(~isnan(Y(:))));
 
-% resample 
+% resample
 Y = resample_ndarray(Y, targ_sr, orig_sr);
 assert(all(~isnan(Y(:))));
 
