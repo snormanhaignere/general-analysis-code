@@ -113,6 +113,14 @@ switch I.regression_method
         error('No valid method for %s\n', method);
 end
 
+% parameters specifically for batching / using SLURM
+% see regress_predictions_wrapper.m
+I.slurm = false;
+I.batch_size = 1000;
+I.overwrite = false;
+I.save_results = false;
+I.output_directory = pwd;
+
 % modify parameters based on user input
 I = parse_optInputs_keyvalue(varargin, I);
 
@@ -135,12 +143,12 @@ Y_dims = Y_dims(1:3);
 
 % create array with delays
 F_shifted = add_delays(F, delays);
+assert(size(F_shifted,1) == size(Y,1));
 
 % unwrap so there a single predictor per delayed regressor
 % time * stim x features * delays
 n_delays = length(delays);
 F_shifted = reshape(F_shifted, F_dims(1)*F_dims(2), F_dims(3)*n_delays);
-assert(size(F_shifted,1) == size(Y,1));
 
 % unwrap data matrix
 Y = reshape(Y, Y_dims(1)*Y_dims(2), Y_dims(3));
@@ -189,13 +197,36 @@ train_fold_indices = train_fold_indices(:);
 
 %% Regression analyses
 
+I.slurm = false;
+I.batch_size = 1000;
+I.overwrite = false;
+I.output_directory = pwd;
+
 % prediction using 3-fold cross-validation
 if I.prediction
-    [Yh, pred_stats.mse, pred_stats.r, pred_stats.test_fold_indices] = ...
-        regress_predictions_from_3way_crossval(F_shifted, Y, ...
-        'test_folds', test_fold_indices, 'train_folds', train_fold_indices, ...
-        'method', I.regression_method, 'K', I.K, ...
-        'std_feats', I.std_feats, 'demean_feats', I.demean_feats);
+    
+    if I.slurm
+        [Yh, pred_stats.test_fold_indices] = ...
+            regress_predictions_wrapper(F_shifted, Y, ...
+            'test_folds', test_fold_indices, 'train_folds', train_fold_indices, ...
+            'method', I.regression_method, 'K', I.K, ...
+            'std_feats', I.std_feats, 'demean_feats', I.demean_feats, ...
+            'slurm', I.slurm, 'batch', I.batch_size, ...
+            'save_results', I.save_results, 'overwrite', I.overwrite, ...
+            'output_directory', I.output_directory);
+    else
+        [Yh, pred_stats.mse, pred_stats.r, ...
+            pred_stats.test_fold_indices, X] = ...
+            regress_predictions_from_3way_crossval(F_shifted, Y, ...
+            'test_folds', test_fold_indices, 'train_folds', train_fold_indices, ...
+            'method', I.regression_method, 'K', I.K, ...
+            'std_feats', I.std_feats, 'demean_feats', I.demean_feats);
+    end
+    
+    % re-wrap to match original dimensions of Y
+    Yh = reshape(Yh, Y_dims);
+    pred_stats.test_fold_indices = reshape(pred_stats.test_fold_indices, Y_dims(1:2));
+    
 else
     Yh = [];
     pred_stats = [];
