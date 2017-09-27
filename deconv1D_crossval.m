@@ -197,11 +197,6 @@ train_fold_indices = train_fold_indices(:);
 
 %% Regression analyses
 
-I.slurm = false;
-I.batch_size = 1000;
-I.overwrite = false;
-I.output_directory = pwd;
-
 % prediction using 3-fold cross-validation
 if I.prediction
     
@@ -211,7 +206,7 @@ if I.prediction
             'test_folds', test_fold_indices, 'train_folds', train_fold_indices, ...
             'method', I.regression_method, 'K', I.K, ...
             'std_feats', I.std_feats, 'demean_feats', I.demean_feats, ...
-            'slurm', I.slurm, 'batch', I.batch_size, 'overwrite', I.overwrite, ...
+            'slurm', I.slurm, 'batch_size', I.batch_size, 'overwrite', I.overwrite, ...
             'output_directory', I.output_directory, ...
             'max_num_process', I.max_num_process);
     else
