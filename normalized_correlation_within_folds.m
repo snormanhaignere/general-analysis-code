@@ -24,10 +24,14 @@ function r = normalized_correlation_within_folds(...
 % 
 % 2017-03-31: Further streamlined, made z-averaging an option, and also made it
 % an option as to whether to average correlation metrics before combining them
+% 
+% 2017-08-25: Made it possible to only compute cross column correlations when
+% computing the numeratore of the normalized correlation
 
 I.metric = 'pearson';
 I.z_averaging = true;
 I.average_before_combining_terms = true;
+I.only_cross_column_corr = false;
 I = parse_optInputs_keyvalue(varargin, I);
 
 % order folds
@@ -65,7 +69,11 @@ for i = 1:n_folds
     rYY(i) = averaging_func(R(~eye(size(R))));
     
     R = similarity_func(X(xi,:), Y(xi,:));
-    rXY(i) = averaging_func(R(:));
+    if I.only_cross_column_corr
+        rXY(i) = averaging_func(R(:));
+    else
+        rXY(i) = averaging_func(R(~eye(size(R))));
+    end
     
 end
 

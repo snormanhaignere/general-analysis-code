@@ -1,4 +1,4 @@
-function [r, Xvar, Yvar, XYcov] = noise_corrected_similarity_within_folds(X, Y, folds, varargin)
+function [r, Px, Py, XY, Mx, My] = noise_corrected_similarity_within_folds(X, Y, folds, varargin)
 
 % Calculates the noise-corrected correlation but within folds. Useful in
 % combination with regression scripts (e.g.
@@ -37,50 +37,77 @@ function [r, Xvar, Yvar, XYcov] = noise_corrected_similarity_within_folds(X, Y, 
 %
 % 2017-03-31: Made it an option as to whether variance and covariance terms are
 % averaged across folds before being combined into the desired metric
+% 
+% 2017-09-26: Made it possible to compute the normalized squared error, which
+% requires correlation and power statistics instead of covariance and variance
+% statistics, as well as mean statistics
 
 I.same_noise = false;
 I.metric = 'pearson';
 I.variance_centering = false;
 I.average_before_combining_terms = true;
+I.only_cross_column_cov = false;
 I = parse_optInputs_keyvalue(varargin, I);
 
 % order folds
 [~,~,folds] = unique(folds(:));
 n_folds = max(folds);
 
-Xvar_folds = nan(n_folds, 1);
-Yvar_folds = nan(n_folds, 1);
-XYcov_folds = nan(n_folds, 1);
+% compute the within fold stats
+Px_folds = nan(n_folds, 1);
+Py_folds = nan(n_folds, 1);
+XY_folds = nan(n_folds, 1);
+Mx_folds = nan(n_folds, 1);
+My_folds = nan(n_folds, 1);
 for i = 1:n_folds
     xi = i == folds;
-    [~, Xvar_folds(i), Yvar_folds(i), XYcov_folds(i)] = ...
+    [~, Px_folds(i), Py_folds(i), XY_folds(i), Mx_folds(i), My_folds(i)] = ...
         noise_corrected_similarity(...
         X(xi,:), Y(xi,:), 'same_noise', I.same_noise, 'metric', I.metric, ...
-        'variance_centering', I.variance_centering);
+        'variance_centering', I.variance_centering, ...
+        'only_cross_column_cov', I.only_cross_column_cov);
 end
 
 % average terms across folds
-Xvar = mean(Xvar_folds);
-Yvar = mean(Yvar_folds);
-XYcov = mean(XYcov_folds);
+Px = mean(Px_folds);
+Py = mean(Py_folds);
+XY = mean(XY_folds);
+Mx = mean(Mx_folds);
+My = mean(My_folds);
 
 % calculate metric
 if I.average_before_combining_terms
-    r = simfunc(Xvar, Yvar, XYcov, I.metric);
+    r = simfunc(Px, Py, XY, Mx, My, I.metric);
 else
-    r = nanmean(simfunc(Xvar_folds, Yvar_folds, XYcov_folds, I.metric));
+    r = nanmean(simfunc(Px_folds, Py_folds, XY_folds, Mx_folds, My_folds, I.metric));
 end
 
-function r = simfunc(Xvar, Yvar, XYcov, metric)
+function r = simfunc(Px, Py, XY, Mx, My, metric)
 
+% compute the desired metric
 switch metric
     case 'pearson'
-        r = XYcov ./ sqrt(Xvar .* Yvar);
-        r(Xvar < 0 | Yvar < 0) = NaN;
+        if Px < 0 || Py < 0
+            r = NaN;
+        else
+            r = XY / sqrt(Px * Py);
+        end
     case 'demeaned-squared-error'
-        r = XYcov ./ ((Xvar + Yvar)/2);
-        r((Xvar + Yvar) < 0) = NaN;
+        if (Px + Py) < 0
+            r = NaN;
+        else
+            r = XY / ((Px + Py)/2);
+        end
+    case 'unnormalized-squared-error'
+        r = Px + Py - 2*XY;
+    case 'normalized-squared-error'
+        a = Px + Py - 2*XY;
+        b = Px + Py - 2*Mx*My;
+        if b < 0
+            r = NaN;
+        else
+            r = 1 - a./b;
+        end
     otherwise
-        error('No matching case for metric %s\n', metric);
+        error('No matching case for metric %s\n', I.metric);
 end
-
