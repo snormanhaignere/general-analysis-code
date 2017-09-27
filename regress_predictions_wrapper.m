@@ -37,7 +37,7 @@ I.output_directory = pwd;
 I.slurm = false;
 I.std_feats = true;
 I.demean_feats = true;
-I.groups = [];
+I.groups = ones(1, size(F,2));
 I.regularization_metric = 'unnormalized-squared-error';
 I.noisecorr_regmetric = false;
 I.correction_method = 'variance-based';
@@ -212,7 +212,12 @@ if I.slurm
     B.batch_directory = I.output_directory;
     
     % set the job id
-    B.job_id = ['sb' num2str(job_index)];
+    % hash string for the job id
+    ResetRandStream2(1);
+    Frand = F(randi(numel(F), [min(numel(F), 10000),1]));
+    Yrand = Y(randi(numel(Y), [min(numel(Y), 10000),1]));
+    hashstring = DataHash({Frand, Yrand, I});
+    B.job_id = [num2str(job_index) '-' hashstring];
     
     % arguments
     if I.noisecorr_regmetric
