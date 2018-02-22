@@ -1,5 +1,7 @@
 function r = correlation_within_folds(x,y,folds,metric)
 
+% 2017-10-05: Updated with normalized squared error
+
 % order folds
 [~,~,folds] = unique(folds(:));
 n_folds = max(folds);
@@ -12,6 +14,8 @@ for i = 1:n_folds
             r_folds(i) = corr(x(xi,:), y(xi,:));
         case 'demeaned-squared-error'
             r_folds(i) = corr_variance_sensitive_symmetric(x(xi,:), y(xi,:));
+        case 'normalized-squared-error'
+            r_folds(i) = normalized_squared_error(x(xi,:), y(xi,:));
         otherwise
             error('Switch statement fell through');
     end
