@@ -1,4 +1,4 @@
-function [B, best_K, mse, r, norm_mse] = ...
+function [B, best_K, mse, r, demeaned_mse, normalized_mse] = ...
     regress_weights_from_2way_crossval(F, Y, varargin)
 
 % [B, best_K, mse, r] = ...
@@ -134,6 +134,8 @@ function [B, best_K, mse, r, norm_mse] = ...
 % cross-validated performance instead of just using the MSE.
 % 
 % 2017-04-05/06 Changed how optional inputs are handled
+% 
+% 2017-10-05 Added the normalized squared error metric
 
 % dimensions of feature matrix
 [n_samples, n_features] = size(F);
@@ -193,7 +195,8 @@ n_K = length(I.K);
 % calculate predictions
 mse = nan(n_folds, max(n_K, 1), n_data_vecs);
 r = nan(n_folds, max(n_K, 1), n_data_vecs);
-norm_mse = nan(n_folds, max(n_K, 1), n_data_vecs);
+demeaned_mse = nan(n_folds, max(n_K, 1), n_data_vecs);
+normalized_mse = nan(n_folds, max(n_K, 1), n_data_vecs);
 for test_fold = 1:n_folds
     
     % train and testing folds
@@ -227,8 +230,10 @@ for test_fold = 1:n_folds
         err = bsxfun(@minus, yh, Y(test_fold_indices,i));
         mse(test_fold,:,i) = nanmean(err.^2, 1);
         r(test_fold,:,i) = nancorr(yh, Y(test_fold_indices,i));
-        norm_mse(test_fold,:,i) = ...
+        demeaned_mse(test_fold,:,i) = ...
             nancorr_variance_sensitive_symmetric(yh, Y(test_fold_indices,i));
+        normalized_mse(test_fold,:,i) = ...
+            nancorr_normalized_squared_error(yh, Y(test_fold_indices,i));
         clear yh err;
         
     end
@@ -243,9 +248,11 @@ switch I.regularization_metric
     case 'unnormalized-squared-error'
         stat = -mse;
     case 'demeaned-squared-error'
-        stat = norm_mse;
+        stat = demeaned_mse;
+    case 'normalized-squared-error'
+        stat = normalized_mse;
     otherwise
-        error('No matching case for crossval_metric %s\n', I.crossval_metric);
+        error('No matching case for crossval_metric %s\n', I.regularization_metric);
 end
 
 if strcmp(I.method, 'least-squares')

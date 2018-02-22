@@ -1,6 +1,8 @@
 function [B, best_K, r_bestK, r] = ...
     regress_weights_from_2way_crossval_noisecorr(F, Y, varargin)
 
+% 2017-09-27: Added normalized squared error metric.
+
 % dimensions of feature matrix
 [n_samples, n_features] = size(F);
 
@@ -65,6 +67,8 @@ switch I.correction_method
         Xvar = nan(n_folds, n_K, n_data_vecs);
         Yvar = nan(n_folds, n_K, n_data_vecs);
         XYcov = nan(n_folds, n_K, n_data_vecs);
+        Mx = nan(n_folds, n_K, n_data_vecs);
+        My = nan(n_folds, n_K, n_data_vecs);
     case 'correlation-based'
         Rx = nan(n_folds, n_K, n_data_vecs);
         Ry = nan(n_folds, n_K, n_data_vecs);
@@ -113,7 +117,9 @@ for test_fold = 1:n_folds
         for j = 1:n_K
             switch I.correction_method
                 case 'variance-based'
-                    [~, Xvar(test_fold, j, i), Yvar(test_fold, j, i), XYcov(test_fold, j, i)] = ...
+                    [~, Xvar(test_fold, j, i), Yvar(test_fold, j, i), ...
+                        XYcov(test_fold, j, i), ...
+                        Mx(test_fold, j, i), My(test_fold, j, i)] = ...
                         noise_corrected_similarity( Y(test_fold_indices,:,i), Yh(:,:,j), ...
                         'metric', I.regularization_metric);
                 case 'correlation-based'
@@ -141,6 +147,8 @@ switch I.correction_method
         Xvar = squeeze_dims(mean(Xvar,1),1);
         Yvar = squeeze_dims(mean(Yvar,1),1);
         XYcov = squeeze_dims(mean(XYcov,1),1);
+        Mx = squeeze_dims(mean(Mx,1),1);
+        My = squeeze_dims(mean(My,1),1);
         switch I.regularization_metric
             case 'pearson'
                 r = XYcov ./ sqrt(Xvar .* Yvar);
@@ -151,6 +159,12 @@ switch I.correction_method
             case 'unnormalized-squared-error'
                 r = Xvar + Yvar - 2*XYcov;
                 r = -r;
+            case 'normalized-squared-error'
+                a = Xvar + Yvar - 2*XYcov;
+                b = Xvar + Yvar - 2*Mx.*My;
+                r = 1 - a./b;
+                r(b < 1e-10) = NaN;
+                clear a b;
             otherwise
                 error('No matching case for regularization_metric %s\n', ...
                     I.regularization_metric);
