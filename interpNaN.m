@@ -16,6 +16,11 @@ function y = interpNaN(x,y,interp_type)
 
 assert(isvector(x) && isvector(y) && all(size(x) == size(y)));
 
+if all(isnan(y));
+    warning('y is all NaN');
+    return;
+end
+
 if nargin < 3
     interp_type = 'pchip';
 end

@@ -32,7 +32,9 @@ Y = reshape(Y, dims(1), prod(dims(2:end)));
 
 % interpolate NaNs for each columne
 for i = 1:size(Y,2)
-    Y(:,i) = interpNaN(x, Y(:,i), interp_type);
+    if ~all(isnan(Y(:,i)))
+        Y(:,i) = interpNaN(x, Y(:,i), interp_type);
+    end
 end
 
 % rewrap the higher-order dimensions
