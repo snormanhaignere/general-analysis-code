@@ -57,7 +57,7 @@ if I.slurm
     addpath(I.slurm_code_directory);
 end
 
-% check dimensions and determin number of total batches
+% check dimensions and determine number of total batches
 if I.noisecorr_regmetric
     assert(ndims(Y) == 3);
     n_batches = ceil(size(Y,3) / I.batch_size);
@@ -206,7 +206,7 @@ end
 if I.slurm
     
     % structure with batch parameters for slurm
-    B.max_num_process = I.max_run_time_in_min;
+    B.max_num_process = I.max_num_process;
     B.mem = I.mem;
     B.max_run_time_in_min = num2str(60*10);
     B.batch_directory = I.output_directory;
