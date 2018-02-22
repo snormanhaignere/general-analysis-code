@@ -60,13 +60,13 @@ stat_rep = repmat( shiftdim(test_stat, -1),  [n_null_smps, ones(1,ndims(test_sta
 % calculate two-tailed p-value
 switch I.tail
     case 'both' % 'two-tailed'
-        p = min(mean(null_samples > stat_rep, 1), mean(null_samples < stat_rep, 1)) * 2;
+        p = min(mean(null_samples >= stat_rep, 1), mean(null_samples <= stat_rep, 1)) * 2;
         
     case 'right'
-        p = mean(null_samples > stat_rep, 1);
+        p = mean(null_samples >= stat_rep, 1);
         
     case 'left'
-        p = mean(null_samples < stat_rep, 1);
+        p = mean(null_samples <= stat_rep, 1);
         
     otherwise
         error('No matching case for I.tail value %s', I.tail);
