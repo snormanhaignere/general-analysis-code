@@ -57,13 +57,14 @@ end
 % interpolate columns with NaNs
 for zi = find(~no_NaNs)
     NaN_rows = isnan(X(:,zi));
-    Y(:,zi) = myinterp1(xi(~NaN_rows)', X(~NaN_rows, zi), yi', 'pchip');
+    if ~all(NaN_rows)
+        Y(:,zi) = myinterp1(xi(~NaN_rows)', X(~NaN_rows, zi), yi', 'pchip');
+    end
 end
-assert(all(~isnan(Y(:))));
+assert(all(all(~isnan(Y)) | all(isnan(Y))));
 
 % resample
 Y = resample_ndarray(Y, targ_sr, orig_sr);
-assert(all(~isnan(Y(:))));
 
 % reshape to nd-array
 Y = reshape(Y, [size(Y,1), X_dims(2:end)]);
