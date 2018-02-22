@@ -109,10 +109,11 @@ function [r, Px_sig, Py_sig, XY, Mx, My] = noise_corrected_similarity(X, Y, vara
 %             Ysig = global_sig + randn(N, 1)*sig(i);
 %             
 %             % add i.i.d. noise to each column
-%             X = bsxfun(@plus, Xsig, 1*randn(N, 3));
-%             Y = bsxfun(@plus, Ysig, 1*randn(N, 2));
+%             X = bsxfun(@plus, Xsig, 2*randn(N, 3));
+%             Y = bsxfun(@plus, Ysig, 2*randn(N, 2));
 %             
 %             r(j,i,k) = normalized_squared_error(Xsig, Ysig);
+%             % rest(j,i,k) = normalized_squared_error(X(:,1), Y(:,1));
 %             rest(j,i,k) = noise_corrected_similarity(X, Y, 'metric', 'normalized-squared-error');
 %             
 %         end
@@ -169,7 +170,7 @@ if I.variance_centering
     Y = bsxfun(@times, Y, mean(std(Y))./std(Y));
 end
 
-% features specific to the noramlized squared error metric
+% features specific to the normalized squared error metric
 % whether to compute the power or the variance
 % whether to use the correlation or covariance
 % normalized squared error also requires the sample means
@@ -194,16 +195,16 @@ wx = size(X,2); wy = size(Y,2);
 % estimate the variance/power of the signal
 if I.same_noise
     if wx == 1 && wy > 1
-        Pxy_sig = Py_noise;
+        Pxy_noise = Py_noise;
     elseif wy == 1 && wx > 1
-        Pxy_sig = Px_noise;
+        Pxy_noise = Px_noise;
     elseif wx > 1 && wy > 1
-        Pxy_sig = (Px_noise*wx + Py_noise*wy) / (wx + wy);
+        Pxy_noise = (Px_noise*wx + Py_noise*wy) / (wx + wy);
     else
         error('Conditional should not have fallen through');
     end
-    Px_sig = Px_total - Pxy_sig;
-    Py_sig = Py_total - Pxy_sig;
+    Px_sig = Px_total - Pxy_noise;
+    Py_sig = Py_total - Pxy_noise;
 end
 
 % estimate covariance or correlation
