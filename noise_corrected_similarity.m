@@ -147,12 +147,16 @@ function [r, Px_sig, Py_sig, XY, Mx, My] = noise_corrected_similarity(X, Y, vara
 % 2017-09-26: Made it possible to compute the normalized squared error, which
 % requires correlation and power statistics instead of covariance and variance
 % statistics, as well as mean statistics
+% 
+% 2018-03-16: Made it possible to take the absolute value of the
+% denominator rather than returning NaN.
 
 % whether or not the noise is the same for X and Y samples
 I.same_noise = false;
 I.metric = 'pearson';
 I.variance_centering = false;
 I.only_cross_column_cov = false;
+I.neg_denom = 'NaN';
 I = parse_optInputs_keyvalue(varargin, I);
 
 % needs to be multiple samples for X and Y if the noise is different
@@ -236,7 +240,14 @@ switch I.metric
         a = Px_sig + Py_sig - 2*XY;
         b = Px_sig + Py_sig - 2*Mx*My;
         if b < 0
-            r = NaN;
+            switch I.neg_denom
+                case 'NaN'
+                    r = NaN;
+                case 'abs'
+                    r = 1 - a./abs(b);
+                otherwise
+                    error('params:notvalid', 'neg_denom cannot be %s', I.neg_denom);
+            end
         else
             r = 1 - a./b;
         end
