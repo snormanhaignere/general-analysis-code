@@ -48,7 +48,7 @@ if any(sum_score(:) < 0)
         case 'error'
             error('Denominator of selectivity measure is negative');
         case 'NaN'
-            xi = sum_score;
+            xi = sum_score < 0;
             sum_score(xi) = NaN;
             diff_score(xi) = NaN;
         otherwise
