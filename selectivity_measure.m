@@ -1,4 +1,4 @@
-function selectivity = selectivity_measure(X, DIM)
+function selectivity = selectivity_measure(X, DIM, NEG_DENOM_BEHAV)
 
 % selectivity = selectivity_measure(X, DIM)
 % 
@@ -15,8 +15,17 @@ function selectivity = selectivity_measure(X, DIM)
 % selectivity_measure(A,1)
 % selectivity_measure(A)
 
-if nargin < 2
+% 2018-05-04: Fixed how negative denominators are handled: added
+% functionality (optionally return NaNs instead of always throwing an
+% error). Fixed a bug: any(sum_score(:)) < 0 should have been
+% any(sum_score(:) < 0)
+
+if nargin < 2 || isempty(DIM)
     DIM = 1;
+end
+
+if nargin < 3 || isempty(NEG_DENOM_BEHAV)
+    NEG_DENOM_BEHAV = 'error';
 end
 
 % check there are only two condition sets
@@ -34,8 +43,17 @@ dimsX = [size(X),1];
 % check denominator is positive
 diff_score = reshape( -diff(X,[],DIM), dimsX([1:DIM-1,DIM+1:end]) );
 sum_score = reshape( sum(X,DIM), dimsX([1:DIM-1,DIM+1:end]) );
-if any(sum_score(:)) < 0
-    error('Denominator of selectivity measure is negative');
+if any(sum_score(:) < 0)
+    switch NEG_DENOM_BEHAV
+        case 'error'
+            error('Denominator of selectivity measure is negative');
+        case 'NaN'
+            xi = sum_score;
+            sum_score(xi) = NaN;
+            diff_score(xi) = NaN;
+        otherwise
+            error('Switch fell through');
+    end
 end
 
 % divide after
