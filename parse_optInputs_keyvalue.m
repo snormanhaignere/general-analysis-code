@@ -1,4 +1,4 @@
-function [I, C] = parse_optInputs_keyvalue(optargs, I)
+function [I, C] = parse_optInputs_keyvalue(optargs, I, varargin)
 
 % Parse optional inputs specified as a key-value pair. Key must be a string.
 % 
@@ -12,7 +12,7 @@ function [I, C] = parse_optInputs_keyvalue(optargs, I)
 % 
 % % parse key value pairs
 % optargs = {'key1', {1 2 3}, 'key2', 1:3, 'key3', 'abc'};
-% I = parse_optInputs_keyvalue(optargs)
+% [I, C] = parse_optInputs_keyvalue(optargs)
 % 
 % % specifying default values
 % I.key1 = {1 2 3};
@@ -20,13 +20,27 @@ function [I, C] = parse_optInputs_keyvalue(optargs, I)
 % I.key3 = 'abc';
 % [I, C] = parse_optInputs_keyvalue({'key1', {4,5,6}}, I)
 % 
+% % empty lists mean unspecified
+% I.key1 = {1 2 3};
+% I.key2 = 1:3;
+% I.key3 = 'abc';
+% [I, C] = parse_optInputs_keyvalue({'key1', {}}, I, 'empty_means_unspecified', true)
+% 
 % % use defaults to catch a spelling mistake
 % I = parse_optInputs_keyvalue({'keys1', {4,5,6}}, I)
 
 % 2016-08-27: Created, Sam NH
 % 
 % 2018-05-23: Added functionality to detect if an optional input has
-% changed.
+% changed. Added functionality to have empty lists mean unspecified values.
+
+P.empty_means_unspecified = false;
+if ~isempty(varargin)
+    P = parse_optInputs_keyvalue(varargin, P);
+    if isempty(P.empty_means_unspecified)
+        P.empty_means_unspecified = false;
+    end
+end
 
 % should be an event number of arguments
 n_optargs = length(optargs);
@@ -82,11 +96,13 @@ for j = 1:n_optargs/2
             allowed_class_swaps = {'double', 'int32'};
             allowed_swap = false;
             for k = 1:size(allowed_class_swaps,1)
+                if P.empty_means_unspecified && isempty(value)
+                    allowed_swap = true;
+                end
                 if strcmp(class(I.(key)), allowed_class_swaps{k,1}) ...
                         && strcmp(class(value), allowed_class_swaps{k,2})
                     allowed_swap = true;
                 end
-                
                 if strcmp(class(value), allowed_class_swaps{k,1}) ...
                         && strcmp(class(I.(key)), allowed_class_swaps{k,2})
                     allowed_swap = true;
@@ -98,19 +114,15 @@ for j = 1:n_optargs/2
             end
         end
     end
-    
-    % check if the key is going to be changed
-    if exist('possible_keys', 'var')
-        if ~isequal(I.(key), value) 
-            C.(key) = true;
-        else
-            % do nothing
-        end
-    else
-        C.(key) = true;
-    end
         
     % assign
-    I.(key) = value;
+    if P.empty_means_unspecified && isempty(value)
+        % do nothing
+    else
+        if ~isfield(I, 'key') || ~isequal(I.(key), value)
+            I.(key) = value;
+            C.(key) = true;
+        end
+    end
     
 end
