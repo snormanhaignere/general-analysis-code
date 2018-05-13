@@ -1,10 +1,12 @@
-function I = parse_optInputs_keyvalue(optargs, I)
+function [I, C] = parse_optInputs_keyvalue(optargs, I)
 
 % Parse optional inputs specified as a key-value pair. Key must be a string.
 % 
 % I is an optional input argument with a structure containing the default values
 % of the parameters, which are overwritten by the optional arguments. If I is
 % specified then every key must match one of the fields of the structure I. 
+% 
+% C is a structure that tells you whether each field has been modified.
 % 
 % -- Example --
 % 
@@ -16,12 +18,15 @@ function I = parse_optInputs_keyvalue(optargs, I)
 % I.key1 = {1 2 3};
 % I.key2 = 1:3;
 % I.key3 = 'abc';
-% I = parse_optInputs_keyvalue({'key1', {4,5,6}}, I)
+% [I, C] = parse_optInputs_keyvalue({'key1', {4,5,6}}, I)
 % 
 % % use defaults to catch a spelling mistake
 % I = parse_optInputs_keyvalue({'keys1', {4,5,6}}, I)
-% 
+
 % 2016-08-27: Created, Sam NH
+% 
+% 2018-05-23: Added functionality to detect if an optional input has
+% changed.
 
 % should be an event number of arguments
 n_optargs = length(optargs);
@@ -39,6 +44,18 @@ end
 % immediately return if there are no optional arguments
 if n_optargs == 0
     return;
+end
+
+% check keys are not repeated
+if length(unique(optargs(1:2:n_optargs))) ~= length(optargs(1:2:n_optargs))
+    error('Duplicate keys');
+end
+
+% assume keys are not changed unless they are
+if exist('possible_keys', 'var')
+    for i = 1:length(possible_keys)
+        C.(possible_keys{i}) = false;
+    end
 end
 
 % assign keys and values
@@ -82,6 +99,17 @@ for j = 1:n_optargs/2
         end
     end
     
+    % check if the key is going to be changed
+    if exist('possible_keys', 'var')
+        if ~isequal(I.(key), value) 
+            C.(key) = true;
+        else
+            % do nothing
+        end
+    else
+        C.(key) = true;
+    end
+        
     % assign
     I.(key) = value;
     
