@@ -102,7 +102,7 @@ switch metric
         r = Px + Py - 2*XY;
     case 'normalized-squared-error'
         a = Px + Py - 2*XY;
-        b = Px + Py - 2*Mx*My;
+        b = Px + Py - 2*Mx.*My;
         if b < 0
             r = NaN;
         else
