@@ -55,11 +55,6 @@ else % extract list of possible keys from the values of I if specified
     possible_keys = fieldnames(I);
 end
 
-% immediately return if there are no optional arguments
-if n_optargs == 0
-    return;
-end
-
 % check keys are not repeated
 if length(unique(optargs(1:2:n_optargs))) ~= length(optargs(1:2:n_optargs))
     error('Duplicate keys');
@@ -70,6 +65,11 @@ if exist('possible_keys', 'var')
     for i = 1:length(possible_keys)
         C.(possible_keys{i}) = false;
     end
+end
+
+% immediately return if there are no optional arguments
+if n_optargs == 0
+    return;
 end
 
 % assign keys and values
@@ -119,7 +119,7 @@ for j = 1:n_optargs/2
     if P.empty_means_unspecified && isempty(value)
         % do nothing
     else
-        if ~isfield(I, 'key') || ~isequal(I.(key), value)
+        if ~isfield(I, key) || ~isequal(I.(key), value)
             I.(key) = value;
             C.(key) = true;
         end
