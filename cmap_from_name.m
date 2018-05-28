@@ -1,4 +1,4 @@
-function cmap = cmap_from_name(cname)
+function cmap = cmap_from_name(cname, varargin)
 
 % Reads in a N x 3 colormap matrix from a color map name
 % 
@@ -15,6 +15,9 @@ function cmap = cmap_from_name(cname)
 % imagesc(linspace(0,1,100));
 % colormap(cmap_from_name('lightblue-to-yellow1-inverted'));
 
+I.N = [];
+I = parse_optInputs_keyvalue(varargin, I);
+
 if strfind(cname, '-inverted')
     cname = strrep(cname, '-inverted', '');
     cmap = flipud(cmap_from_name(cname));
@@ -29,7 +32,7 @@ addpath([fileparts(which(mfilename)) '/pmkmp']);
 
 % color map and range of values to plot
 switch cname
-    case 'lightblue-to-yellow1';
+    case 'lightblue-to-yellow1'
         load(['colormap-custom-' cname '.mat'], 'cmap');
     case {'parula', 'jet'}
         cmap = colormap(cname);
@@ -41,8 +44,18 @@ switch cname
         cmap = inferno;
     case {'viridis'}
         cmap = viridis;
-    case {'cbrewer-Reds'}
+    case {'cbrewer-reds'}
         cmap = cbrewer('seq', 'Reds', 128);
+    case {'cbrewer-red-blue'}
+        cmap = cbrewer('div', 'RdBu', 128);
+    case {'cbrewer-blue-red'}
+        cmap = flipud(cbrewer('div', 'RdBu', 128));
+    case {'line-colors'}
+        load('colormap-default-line-colors.mat','cmap');
     otherwise
         error('No matching colormap');
+end
+
+if ~isempty(I.N)
+    cmap = interp1(1:size(cmap,1), cmap, linspace(1, size(cmap,1), I.N));
 end
