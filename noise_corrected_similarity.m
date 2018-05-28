@@ -130,8 +130,7 @@ function [r, Px_sig, Py_sig, XY, Mx, My] = noise_corrected_similarity(X, Y, vara
 %     xlim([-0.2 1.2]); ylim([-0.2 1.2])
 %     title(sprintf('Version %d', i));
 % end
-% 
-% 
+
 % 2017-03-19: Modified to return numerator and denominator separately
 % 
 % 2017-03-20: Fixed a bug that prevent the scripts from working when one of the
@@ -150,14 +149,41 @@ function [r, Px_sig, Py_sig, XY, Mx, My] = noise_corrected_similarity(X, Y, vara
 % 
 % 2018-03-16: Made it possible to take the absolute value of the
 % denominator rather than returning NaN.
+% 
+% 2018-04-23: Can force the noise to only be computed from one of the two
+% variables
 
 % whether or not the noise is the same for X and Y samples
 I.same_noise = false;
+I.noise_only_from_Y = false;
+I.noise_only_from_X = false;
 I.metric = 'pearson';
 I.variance_centering = false;
 I.only_cross_column_cov = false;
 I.neg_denom = 'NaN';
 I = parse_optInputs_keyvalue(varargin, I);
+
+% if we're estimating the noise power of X from Y
+% then we're assuming the noise is the same, and 
+% we can't do the reverse
+if I.noise_only_from_Y
+    I.same_noise = true;
+    assert(~I.noise_only_from_X);
+    assert(size(Y,2)>1);
+end
+if I.noise_only_from_X
+    I.same_noise = true;
+    assert(~I.noise_only_from_Y)
+    assert(size(X,2)>1);
+end
+
+% force only taking noise from one of the variables if theother is not available
+if I.same_noise && size(X,2) == 1 && size(Y,2) > 1
+    I.noise_only_from_Y = true;
+end
+if I.same_noise && size(Y,2) == 1 && size(X,2) > 1
+    I.noise_only_from_X = true;
+end
 
 % needs to be multiple samples for X and Y if the noise is different
 % otherwise needs to be multiple samples for either X or Y
@@ -198,14 +224,12 @@ wx = size(X,2); wy = size(Y,2);
 % optionally combine the two noise variance or power estimates, and use this to
 % estimate the variance/power of the signal
 if I.same_noise
-    if wx == 1 && wy > 1
+    if I.noise_only_from_Y
         Pxy_noise = Py_noise;
-    elseif wy == 1 && wx > 1
+    elseif I.noise_only_from_X
         Pxy_noise = Px_noise;
-    elseif wx > 1 && wy > 1
-        Pxy_noise = (Px_noise*wx + Py_noise*wy) / (wx + wy);
     else
-        error('Conditional should not have fallen through');
+        Pxy_noise = (Px_noise*wx + Py_noise*wy) / (wx + wy);
     end
     Px_sig = Px_total - Pxy_noise;
     Py_sig = Py_total - Pxy_noise;
@@ -227,6 +251,7 @@ switch I.metric
         else
             r = XY / sqrt(Px_sig * Py_sig);
         end
+        
     case 'demeaned-squared-error'
         if (Px_sig + Py_sig) < 0
             r = NaN;
@@ -236,6 +261,7 @@ switch I.metric
         end
     case 'unnormalized-squared-error'
         r = Px_sig + Py_sig - 2*XY;
+        
     case 'normalized-squared-error'
         a = Px_sig + Py_sig - 2*XY;
         b = Px_sig + Py_sig - 2*Mx*My;
@@ -251,6 +277,21 @@ switch I.metric
         else
             r = 1 - a./b;
         end
+    
+    case 'std-ratio-v2'
+        if Py_sig < 0
+            switch I.neg_denom
+                case 'NaN'
+                    r = NaN;
+                case 'abs'
+                    r = sign(Px_sig) .* sqrt(abs(Px_sig) ./ abs(Py_sig));
+                otherwise
+                    error('params:notvalid', 'neg_denom cannot be %s', I.neg_denom);
+            end
+        else
+            r = sign(Px_sig) .* sqrt(abs(Px_sig) ./ Py_sig);
+        end
+        
     otherwise
         error('No matching case for metric %s\n', I.metric);
 end
