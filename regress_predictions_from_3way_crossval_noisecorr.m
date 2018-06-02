@@ -21,6 +21,7 @@ I.regularization_metric = 'demeaned-squared-error';
 I.correction_method = 'variance-based';
 I.warning = true;
 I.MAT_file = '';
+I.F_test = [];
 I = parse_optInputs_keyvalue(varargin, I);
 
 % regularization parameter
@@ -102,8 +103,15 @@ for test_fold = 1:n_folds
         toc;
     end
     
+    % can optionally use a different feature set
+    if ~isempty(I.F_test)
+        assert(all(size(I.F_test) == size(F)));
+        F_test = I.F_test(test_samples,:);
+    else
+        F_test = F(test_samples,:);
+    end
+    
     % prediction from test features
-    F_test = F(test_samples,:);
     F_test = [ones(size(F_test, 1), 1), F_test]; %#ok<AGROW>
     
     % multiply weights from training data against test features

@@ -45,6 +45,7 @@ I.slurm_code_directory = '/mindhive/nklab/u/svnh/sbatch-code-v2';
 I.max_num_process = 30;
 I.mem = '8000';
 I.max_run_time_in_min = num2str(60*10);
+I.F_test = [];
 I = parse_optInputs_keyvalue(varargin, I);
 
 % must save results if using SLURM
@@ -196,7 +197,8 @@ func_args = {...
     F, Y, 'test_folds', I.test_folds, 'train_folds', I.train_folds, ...
     'method', I.method, 'K', I.K, 'std_feats', I.std_feats, ...
     'demean_feats', I.demean_feats, 'groups', I.groups, 'MAT_file', MAT_file,...
-    'regularization_metric', I.regularization_metric};
+    'regularization_metric', I.regularization_metric, ...
+    'F_test', I.F_test};
 
 % arguments only applicable to noise correction
 if I.noisecorr_regmetric

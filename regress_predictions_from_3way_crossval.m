@@ -79,7 +79,7 @@ function [Yh, mse, r, test_fold_indices, B] = ...
 % xlim([0 l]); ylim([0 l]);
 % hold on; plot([0 l], [0 l], 'r--');
 % xlabel('Least Squares MSE'); ylabel('Ridge MSE');
-%
+
 % 2016-12-8 Changed how features are standardized prior to regression, Sam NH
 %
 % 2016-12-29 Made it possible to input multiple data vectors as a matrix. This
@@ -92,6 +92,8 @@ function [Yh, mse, r, test_fold_indices, B] = ...
 % cross-validated performance instead of just using the MSE.
 % 
 % 2017-04-05/06 Changed how optional inputs are handled
+% 
+% 2018-05-31: Made it possible to swap in a new feature set for test
 
 % dimensions of feature matrix
 [n_samples, n_features] = size(F);
@@ -109,6 +111,7 @@ I.demean_feats = true;
 I.regularization_metric = 'unnormalized-squared-error';
 I.warning = true;
 I.MAT_file = '';
+I.F_test = [];
 I = parse_optInputs_keyvalue(varargin, I);
 
 % groups
@@ -168,8 +171,15 @@ for test_fold = 1:n_folds
             'warning', I.warning);
     end
     
+    % can optionally use a different feature set
+    if ~isempty(I.F_test)
+        assert(all(size(I.F_test) == size(F)));
+        F_test = I.F_test(test_samples,:);
+    else
+        F_test = F(test_samples,:);
+    end
+    
     % prediction from test features
-    F_test = F(test_samples,:);
     F_test = [ones(size(F_test, 1), 1), F_test]; %#ok<AGROW>
     Yh(test_samples,:) = F_test * B_train;
     
