@@ -19,27 +19,26 @@ function [X,sd] = zscore_using_central_samples(X, f)
 % 
 % % standard deviation of a unit-variance Gaussian estimated using the empirical
 % % standard deviation or using the method of central samples
-% X = randn(1000,1);
+% X = 0.25*randn(10000,1);
 % std(X)
 % [~,sd] = zscore_using_central_samples(X, 0.2)
 % 
 % % add outliers and repeat
 % outliers = randn(size(X))*5;
-% outliers(outliers < 5) = 0;
+% outliers(outliers < 10) = 0;
 % X = X + outliers;
 % std(X)
 % [~,sd] = zscore_using_central_samples(X, 0.2)
-% 
-% % convert vector to column vector if not already
-% if isvector(X)
-%     X = X(:);
-% end
+
+% 2018-11-20: Altered to make the computation a little simpler
 
 % subtract median
-X = X - repmat(median(X), size(X,1), 1);
+% X = X - repmat(median(X), size(X,1), 1);
 
 % estimate standard deviation from central samples
-sd = 2*quantile(abs(X), f) / (norminv(0.5+f/2,0,1) - norminv(0.5-f/2,0,1));
+sd = (quantile(X, 0.5+f/2)-quantile(X, 0.5-f/2)) ...
+    / (norminv(0.5+f/2,0,1) - norminv(0.5-f/2,0,1));
+% sd = 2*quantile(abs(X), f) / (norminv(0.5+f/2,0,1) - norminv(0.5-f/2,0,1));
 
 % divide by estimate of the standard deviation
 X = X ./ repmat(sd, size(X,1), 1);
