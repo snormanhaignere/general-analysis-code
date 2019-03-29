@@ -33,7 +33,7 @@ function [X,sd] = zscore_using_central_samples(X, f)
 % 2018-11-20: Altered to make the computation a little simpler
 
 % subtract median
-% X = X - repmat(median(X), size(X,1), 1);
+X = X - repmat(median(X), size(X,1), 1);
 
 % estimate standard deviation from central samples
 sd = (quantile(X, 0.5+f/2)-quantile(X, 0.5-f/2)) ...

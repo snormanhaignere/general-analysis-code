@@ -13,6 +13,7 @@ function [Xs,Xl,Yl] = pls12(X,Y,K,demean,stdXY)
 % 
 % 2016-01-19: Created, Sam NH
 
+
 % whether or not to demean X and Y
 if nargin < 4 || isempty(demean)
     demean = true;

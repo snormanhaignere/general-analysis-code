@@ -1,4 +1,4 @@
-function [I, C] = parse_optInputs_keyvalue(optargs, I, varargin)
+function [I, C, C_value] = parse_optInputs_keyvalue(optargs, I, varargin)
 
 % Parse optional inputs specified as a key-value pair. Key must be a string.
 % 
@@ -7,6 +7,8 @@ function [I, C] = parse_optInputs_keyvalue(optargs, I, varargin)
 % specified then every key must match one of the fields of the structure I. 
 % 
 % C is a structure that tells you whether each field has been modified.
+% 
+% C_value has the value for all of the fields that have been changed
 % 
 % -- Example --
 % 
@@ -33,6 +35,9 @@ function [I, C] = parse_optInputs_keyvalue(optargs, I, varargin)
 % 
 % 2018-05-23: Added functionality to detect if an optional input has
 % changed. Added functionality to have empty lists mean unspecified values.
+% 
+% 2019-01-18: Added C_value, useful for creating strings of parameters that
+% have changed
 
 P.empty_means_unspecified = false;
 if ~isempty(varargin)
@@ -66,6 +71,8 @@ if exist('possible_keys', 'var')
         C.(possible_keys{i}) = false;
     end
 end
+
+C_value = struct;
 
 % immediately return if there are no optional arguments
 if n_optargs == 0
@@ -122,7 +129,9 @@ for j = 1:n_optargs/2
         if ~isfield(I, key) || ~isequal(I.(key), value)
             I.(key) = value;
             C.(key) = true;
+            C_value.(key) = I.(key);
         end
     end
     
 end
+

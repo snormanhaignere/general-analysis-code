@@ -1,4 +1,4 @@
-function E = stderr_from_samples_withsub_corrected(X)
+function E = stderr_from_samples_withsub_corrected(X, varargin)
 % function stderr_from_samples_withsub_corrected(X)
 % 
 % Computes standard errors from a vector of samples, using
@@ -15,6 +15,17 @@ function E = stderr_from_samples_withsub_corrected(X)
 % across_subject_stderr = stderr_from_samples(X)
 % within_subject_stderr = stderr_from_samples_withsub_corrected(X)
 
+I.exclude_NaNs = false;
+I = parse_optInputs_keyvalue(varargin, I);
+
+if I.exclude_NaNs
+    meanfn = @nanmean;
+    medianfn = @nanmedian;
+else
+    meanfn = @mean;
+    medianfn = @median;
+end
+
 % dimension of input matrix
 dims = size(X);
 % ndims = length(dims);
@@ -30,8 +41,8 @@ nconds = prod(dims(2:end));
 correction_factor = sqrt(1/(nconds*(nconds-1)/(nconds^2)));
 
 % row means
-row_means = mean(X,2);
-col_medians = mean(X,1);
+row_means = meanfn(X,2);
+col_medians = medianfn(X,1);
 
 % data with zero-mean rows
 X_zeromean_rows = X - repmat(row_means, [1 prod(dims(2:end))]);
@@ -47,14 +58,14 @@ end
 % reshape back to original dimensions
 E = reshape(E, [2,dims(2:end)]);
 
-function outMat = sumdims(inMat, dim)
-% sums matrix inMat across dimensions in vector dim
-
-for xx = 1:length(dim)
-    %     curDim = dim(xx)
-    %     outMat = mean(inMat, curDim)
-    %     dim = setdiff(dim, curDim);
-    %     dim(dim>curDim) = dim(dim>curDim)-1;
-    inMat = nansum(inMat, dim(xx));
-end
-outMat = inMat;
+% function outMat = sumdims(inMat, dim)
+% % sums matrix inMat across dimensions in vector dim
+% 
+% for xx = 1:length(dim)
+%     %     curDim = dim(xx)
+%     %     outMat = mean(inMat, curDim)
+%     %     dim = setdiff(dim, curDim);
+%     %     dim(dim>curDim) = dim(dim>curDim)-1;
+%     inMat = nansum(inMat, dim(xx));
+% end
+% outMat = inMat;

@@ -1,4 +1,4 @@
-function selectivity = selectivity_measure(X, DIM, NEG_DENOM_BEHAV)
+function selectivity = selectivity_measure(X, DIM, NEG_DENOM_BEHAV, ABS, RECT)
 
 % selectivity = selectivity_measure(X, DIM)
 % 
@@ -28,9 +28,17 @@ if nargin < 3 || isempty(NEG_DENOM_BEHAV)
     NEG_DENOM_BEHAV = 'error';
 end
 
+if nargin < 4 || isempty(ABS)
+    ABS = false;
+end
+
+if nargin < 5 || isempty(RECT)
+    RECT = false;
+end
+
 % check there are only two condition sets
 if size(X,DIM) ~= 2
-    error(...se
+    error(...
         ['Dimension %d should have size 2' ...
         '\nSelectivity only defined for pairs of values'], ...
         DIM);
@@ -39,10 +47,20 @@ end
 % dimensionality of input
 dimsX = [size(X),1];
 
+if RECT
+    X = max(X, 0);
+end
+
 % selectivity measure
 % check denominator is positive
 diff_score = reshape( -diff(X,[],DIM), dimsX([1:DIM-1,DIM+1:end]) );
-sum_score = reshape( sum(X,DIM), dimsX([1:DIM-1,DIM+1:end]) );
+if ABS
+    error('Absolute value denominator seems dicey');
+    sum_score = reshape( sum(abs(X),DIM), dimsX([1:DIM-1,DIM+1:end]) );
+else
+    sum_score = reshape( sum(X,DIM), dimsX([1:DIM-1,DIM+1:end]) );
+end
+
 if any(sum_score(:) < 0)
     switch NEG_DENOM_BEHAV
         case 'error'

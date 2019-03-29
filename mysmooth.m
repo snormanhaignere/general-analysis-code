@@ -4,6 +4,11 @@ function Ysmooth = mysmooth(Y, sr, fwhm_ms)
 % 
 % 2017-11-24: Created by Sam NHs
 
+if fwhm_ms == 0
+    Ysmooth = Y;
+    return;
+end
+
 % kernel
 fwhm_smp = fwhm_ms*sr/1000;
 sig = fwhm_smp / sqrt(8*log(2));
