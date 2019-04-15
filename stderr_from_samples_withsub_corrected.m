@@ -15,16 +15,8 @@ function E = stderr_from_samples_withsub_corrected(X, varargin)
 % across_subject_stderr = stderr_from_samples(X)
 % within_subject_stderr = stderr_from_samples_withsub_corrected(X)
 
-I.exclude_NaNs = false;
+I.NaN_frac = 0.01;
 I = parse_optInputs_keyvalue(varargin, I);
-
-if I.exclude_NaNs
-    meanfn = @nanmean;
-    medianfn = @nanmedian;
-else
-    meanfn = @mean;
-    medianfn = @median;
-end
 
 % dimension of input matrix
 dims = size(X);
@@ -32,40 +24,31 @@ dims = size(X);
 
 % reshape to 2D matrix
 X = reshape(X, [dims(1),prod(dims(2:end))]);
-[M, N] = size(X);
 
-% number of columns
-nconds = prod(dims(2:end));
+% number of conditions
+N = size(X,2);
 
 % correction factor to make estimates unbiased
-correction_factor = sqrt(1/(nconds*(nconds-1)/(nconds^2)));
+correction_factor = sqrt(N/(N-1));
 
 % row means
-row_means = meanfn(X,2);
-col_medians = medianfn(X,1);
+row_means = nanmean(X,2);
+col_medians = nanmedian(X,1);
 
 % data with zero-mean rows
-X_zeromean_rows = X - repmat(row_means, [1 prod(dims(2:end))]);
+X_zeromean_rows = bsxfun(@minus, X, row_means);
+X_zeromedian_cols = bsxfun(@minus, X_zeromean_rows, nanmedian(X_zeromean_rows));
 
-% errors for each column
-E = nan(2,N);
-for i = 1:N
-    x = X_zeromean_rows(:,i);
-    xsort = sort(x-median(x),'ascend');
-    E(:,i) = correction_factor * interp1(linspace(0,1,M)', xsort, normcdf([-1 1]',0,1)) + col_medians(i); % standard errors
-end
+% central interval
+central_frac = diff(normcdf([-1 1],0,1));
+tail_frac = 1-central_frac;
+E_biased = central_interval_from_samples(X_zeromedian_cols,tail_frac,'NaN_frac',I.NaN_frac);
+
+% correction factor
+E_corrected = correction_factor*E_biased;
+
+% add back in column medians
+E = bsxfun(@plus, E_corrected, col_medians);
 
 % reshape back to original dimensions
 E = reshape(E, [2,dims(2:end)]);
-
-% function outMat = sumdims(inMat, dim)
-% % sums matrix inMat across dimensions in vector dim
-% 
-% for xx = 1:length(dim)
-%     %     curDim = dim(xx)
-%     %     outMat = mean(inMat, curDim)
-%     %     dim = setdiff(dim, curDim);
-%     %     dim(dim>curDim) = dim(dim>curDim)-1;
-%     inMat = nansum(inMat, dim(xx));
-% end
-% outMat = inMat;
