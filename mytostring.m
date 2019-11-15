@@ -11,12 +11,18 @@ function s = mytostring(x, varargin)
 % 2018-09-15: Made delimiter optional argument, Sam NH
 
 P.delimiter = '-';
+P.hashlen = NaN;
 P = parse_optInputs_keyvalue(varargin, P);
 
-if ischar(x)
+if isempty(x)
+    s = 'NULL';
+elseif ischar(x)
     s = x;
 elseif (isnumeric(x) || islogical(x)) && (isscalar(x) || isvector(x))
     s = regexprep(num2str(x), '[ ]*', '-');
+    if ~isnan(P.hashlen) && length(s) > P.hashlen
+        s = DataHash(x);
+    end
 elseif iscell(x)
     s = '';
     for i = 1:length(x)

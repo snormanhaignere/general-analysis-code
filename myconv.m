@@ -48,7 +48,7 @@ end
 
 % parse changes to the above optional arguments
 I = parse_optInputs_keyvalue(varargin, I);
-
+    
 %% Padding
 
 assert(isvector(h));

@@ -126,7 +126,7 @@ for j = 1:n_optargs/2
     if P.empty_means_unspecified && isempty(value)
         % do nothing
     else
-        if ~isfield(I, key) || ~isequal(I.(key), value)
+        if ~isfield(I, key) || ~isequaln(I.(key), value)
             I.(key) = value;
             C.(key) = true;
             C_value.(key) = I.(key);

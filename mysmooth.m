@@ -1,8 +1,13 @@
-function Ysmooth = mysmooth(Y, sr, fwhm_ms)
+function Ysmooth = mysmooth(Y, sr, fwhm_ms, varargin)
 
 % Smoothes every column of a data matrix by a Gaussian kernel
 % 
 % 2017-11-24: Created by Sam NHs
+% 
+% 2019-09-04: Added option for non-causal smoothing
+
+I.causal = false;
+I = parse_optInputs_keyvalue(varargin, I);
 
 if fwhm_ms == 0
     Ysmooth = Y;
@@ -21,7 +26,7 @@ Y = reshape(Y, dims(1), prod(dims(2:end)));
 Ysmooth = nan(size(Y));
 for i = 1:prod(dims(2:end))
     if ~any(isnan(Y(:,i)))
-        Ysmooth(:,i) = myconv(Y(:,i), h, 'causal', false);
+        Ysmooth(:,i) = myconv(Y(:,i), h, 'causal', I.causal);
     end
 end
 

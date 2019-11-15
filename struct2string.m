@@ -31,19 +31,16 @@ end
 for i = 1:length(f)
     omit = ~isempty(P.omit_field) && any(ismember(P.omit_field, f{i}));
     if ~omit
-        % break into new cell if length limit exceeded
-        if length(idstring{end}) > P.maxlen
-            idstring = [idstring, {''}]; %#ok<AGROW>
-        end
-        
         % add to string
+        str_to_add = [f{i} '-' mytostring(S.(f{i}), 'hashlen', P.maxlen - length(f{i})-1)];
         if isempty(idstring{end})
-            idstring{end} = [f{i} '-' mytostring(S.(f{i}))];
+            idstring{end} = str_to_add;
         else
-            try
-                idstring{end} = [idstring{end} '_' f{i} '-' mytostring(S.(f{i}))];
-            catch
-                keyboard
+            % break into new cell if length limit exceeded
+            if (length(idstring{end}) + length(str_to_add) + 1) > P.maxlen
+                idstring = [idstring, {str_to_add}]; %#ok<AGROW>
+            else
+                idstring{end} = [idstring{end} '_' str_to_add];
             end
         end
     end

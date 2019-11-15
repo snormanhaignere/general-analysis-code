@@ -21,6 +21,7 @@ function partition_index = partition_within_labels(labels, partition_fractions, 
 
 I.seed = [];
 I.shuffle = true;
+I.version = 1;
 I = parse_optInputs_keyvalue(varargin, I);
 
 % check vector
@@ -61,6 +62,11 @@ for i = 1:n_unique_labels
     end
     
     count = 0;
+    if I.version==2
+        partition_order = randperm(n_partitions);
+    else
+        partition_order = 1:n_partitions;
+    end
     for j = 1:n_partitions
 
         % indices for this partition (relative to the indices for this label)
@@ -68,14 +74,26 @@ for i = 1:n_unique_labels
         if j == n_partitions
             end_ind = length(xi);
         else
-            end_ind = count + round(partition_fractions(j)*length(xi));
+            end_ind = count + round(partition_fractions(partition_order(j))*length(xi));
+        end
+        
+        % chop off end if it hangs over
+        if I.version==2
+            if end_ind > length(xi)
+                end_ind = length(xi);
+            end
         end
         yi = (start_ind:end_ind); %np.int32(np.arange(start_ind, end_ind))
-
+        
         % select indices
-        partition_index(xi(yi)) = j;
-
+        partition_index(xi(yi)) = partition_order(j);
+            
         % update count
         count = count + length(yi);
+        
+        if I.version==2 && count == length(xi)
+            break;
+        end
+        
     end
 end

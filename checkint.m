@@ -7,6 +7,6 @@ if nargin < 2
     tol = 1e-10;
 end
 y = round(x);
-assert(abs(x - y) < tol);
+assert(all(abs(x - y) < tol));
 
 

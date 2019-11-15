@@ -1,6 +1,6 @@
 % function forLegend = bplot(X,varargin)
 % This function will create a nice boxplot from a set of data. You don't
-% need any toolboxes. It will make one boxplot at a time.
+% need any toolboxes.
 % 
 %     bplot(D) will create a boxplot of data D, no fuss.
 % 
@@ -64,11 +64,9 @@
 % points around the other axis so that you can see exactly how many are
 % there.
 % 
-%% Examples
-% Note that this function will only plot one boxplot at a time.
-% 
-% bplot(randn(1,30))
-% bplot(randn(1,30),'color','black');
+% % Examples: 
+% bplot(randn(30,3),'outliers')
+% bplot(randn(30,3),'color','black');
 % ----
 % X = round(randn(30,4)*5)/5; % random, with some duplicates
 % T = bplot(X,'points');
@@ -84,11 +82,14 @@
 %                   questions to Lansey at gmail.com                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 %%
-function forLegend = bplot(x,varargin)
+function [forLegend, boxEdge, wisEdge] = bplot(x,varargin)
+
+whiskermarker = '--';
+
 %% save the initial hold state of the figure.
 hold_state = ishold;
 if ~hold_state
-    clf;
+    cla;
 end
 %%
 if size(x,1)>1 && size(x,2)>1 % great, you want to plot a bunch.
@@ -109,6 +110,9 @@ if size(x,1)>1 && size(x,2)>1 % great, you want to plot a bunch.
 
         end
     end
+    if ~hold_state
+        hold off;
+    end
     return;
 end
 
@@ -124,6 +128,13 @@ if ~isempty(varargin)
 else % not text arguments, not even separate 'x' argument
     y=1;
     justOneInputFlag=1;
+end
+
+%% check that there is at least some data
+if isempty(x)
+    warning('you asked for no data, so no data is what you plot.');
+    forLegend = '';
+    return;
 end
 %%
 if length(y)>1
@@ -144,6 +155,9 @@ stdFlag = 0;
 meanFlag = 1;
 specialWidthFlag = 0; % this flag will determine whether the bar width is 
 %                       automatically set as a proportion of the axis width
+
+toScale = 0; % this flag is to scale the jitter function in case the 
+%              histogram function is calling it
 
 if justOneInputFlag
     if length(x)<400
@@ -173,6 +187,9 @@ while k <= length(varargin)
             forceNoLegend=1;
         case {'box','boxes','boxedge'}
             percentileNum = varargin{k + 1};
+            k = k + 1;
+        case {'whiskermarker'}
+            whiskermarker = varargin{k + 1};
             k = k + 1;
         case {'wisker','wiskers','whisker','whiskers','whiskeredge'}
             percentileNum2 = varargin{k + 1};
@@ -205,6 +222,9 @@ while k <= length(varargin)
             widthFlag = 1;
         case {'nomean'}
             meanFlag=0;
+        case {'toscale','histmode','hist'}
+            toScale = 1; % scale away folks!
+            
 %         case {'mode','modes'}
 %             modeFlag = 1;
 %         case {'text','alltext','t'} % ?????
@@ -232,7 +252,7 @@ if ~widthFlag % if the user didn't specify a specific width of the bar.
 end
 %% calculate the necessary values for the sizes of the box and whiskers
 boxEdge = prctile(x,[percentileNum 100-percentileNum]);
-IQR=diff(boxEdge);
+IQR=max(diff(boxEdge),eps); % in case IQR is zero, make it eps
 if stdFlag
     stdX = std(x);
     wisEdge = [meanX-stdX meanX+stdX];
@@ -246,7 +266,7 @@ hReg=[];
 hReg2 = [];
 
 if horizontalFlag
-    hReg2(end+1) = rectangle('Position',[boxEdge(1),y-barWidth/2,IQR,barWidth],'linewidth',linewidth,'EdgeColor',boxColor);
+    hReg2(end+1) = rectangle('Position',[boxEdge(1),y-barWidth/2,IQR,barWidth],'linewidth',linewidth,'EdgeColor',boxColor,'facecolor',[1 1 1]);
 
     hold on;
     hReg2(end+1) = plot([medianX medianX],[y-barWidth/2 y+barWidth/2],'color',meanColor,'linewidth',linewidth);
@@ -255,12 +275,12 @@ if horizontalFlag
     end
     hReg2(end+1) = plot([boxEdge(1) boxEdge(2)],[y-barWidth/2 y-barWidth/2],'linewidth',linewidth,'color',boxColor);
 
-    hReg(end+1) = plot([wisEdge(1) boxEdge(1)],[y y],'--','linewidth',linewidth,'color',wisColor);
-    hReg(end+1) = plot([boxEdge(2) wisEdge(2)],[y y],'--','linewidth',linewidth,'color',wisColor);
+    hReg(end+1) = plot([wisEdge(1) boxEdge(1)],[y y],whiskermarker,'linewidth',linewidth,'color',wisColor);
+    hReg(end+1) = plot([boxEdge(2) wisEdge(2)],[y y],whiskermarker,'linewidth',linewidth,'color',wisColor);
     hReg2(end+1) = plot([wisEdge(1) wisEdge(1)],[y-barWidth/3 y+barWidth/3],'-','linewidth',linewidth,'color',wisColor);
     hReg(end+1) = plot([wisEdge(2) wisEdge(2)],[y-barWidth/3 y+barWidth/3],'-','linewidth',linewidth,'color',wisColor);
 else %
-    hReg2(end+1) = rectangle('Position',[y-barWidth/2,boxEdge(1),barWidth,IQR],'linewidth',linewidth,'EdgeColor',boxColor);
+    hReg2(end+1) = rectangle('Position',[y-barWidth/2,boxEdge(1),barWidth,IQR],'linewidth',linewidth,'EdgeColor',boxColor,'facecolor',[1 1 1]);
     hold on;
     
     hReg2(end+1) = plot([y-barWidth/2 y+barWidth/2],[medianX medianX],'color',meanColor,'linewidth',linewidth);
@@ -269,8 +289,8 @@ else %
     end
     hReg2(end+1) = plot([y-barWidth/2 y-barWidth/2],[boxEdge(1) boxEdge(2)],'linewidth',linewidth,'color',boxColor);
 
-    hReg(end+1) = plot([y y],[wisEdge(1) boxEdge(1)],'--','linewidth',linewidth,'color',wisColor);
-    hReg(end+1) = plot([y y],[boxEdge(2) wisEdge(2)],'--','linewidth',linewidth,'color',wisColor);
+    hReg(end+1) = plot([y y],[wisEdge(1) boxEdge(1)],whiskermarker,'linewidth',linewidth,'color',wisColor);
+    hReg(end+1) = plot([y y],[boxEdge(2) wisEdge(2)],whiskermarker,'linewidth',linewidth,'color',wisColor);
     hReg2(end+1) = plot([y-barWidth/3 y+barWidth/3],[wisEdge(1) wisEdge(1)],'-','linewidth',linewidth,'color',wisColor);
     hReg(end+1) = plot([y-barWidth/3 y+barWidth/3],[wisEdge(2) wisEdge(2)],'-','linewidth',linewidth,'color',wisColor);
 
@@ -285,17 +305,21 @@ if outlierFlag % but only if you want to
     xx=x(I);
     yy=I*0+y;
     yy=yy(I);
-    yy = jitter(xx,yy);
+    yy = jitter(xx,yy,toScale);
 
-    maxPointHeight = 2.5;
-    yy = (yy-y)*4+y;
-    yy = (yy-y)*(barWidth/maxPointHeight)/max([yy-y; barWidth/maxPointHeight])+y;
+    if ~isempty(yy)
+        yy = jitter(xx,yy,toScale);
 
-    if ~isempty(xx)
-        if horizontalFlag
-            hReg2(6) = plot(xx,yy,'o','linewidth',linewidth,'color',wisColor);
-        else
-             hReg2(6) = plot(yy,xx,'o','linewidth',linewidth,'color',wisColor);
+        maxPointHeight = 2.5;
+        yy = (yy-y)*4+y;
+        yy = (yy-y)*(barWidth/maxPointHeight)/max([yy-y; barWidth/maxPointHeight])+y;
+
+        if ~isempty(xx)
+            if horizontalFlag
+                hReg2(6) = plot(xx,yy,'o','linewidth',linewidth,'color',wisColor);
+            else
+                 hReg2(6) = plot(yy,xx,'o','linewidth',linewidth,'color',wisColor);
+            end
         end
     end
 end
@@ -308,7 +332,7 @@ end
 % remove all remenants of legends
 if forceNoLegend
     for ii=1:length(hReg2)
-        set(get(get(hReg2(ii),'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+        set(get(get(hReg2(ii),'default'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
     end
 end
 %% set the axis
@@ -352,9 +376,13 @@ end
 % in case two point appear at the same value, the jitter function will make
 % them appear slightly separated from each other so you can see the real
 % number of points at a given location.
-function yy =jitter(xx,yy)
-% tempY=yy(1);
-tempY=1;
+function yy =jitter(xx,yy,toScale)
+if toScale
+    tempY=yy(1);
+else
+    tempY=1;
+end
+
 for ii=unique(xx)';
     I = xx==(ii);
     fI = find(I)';

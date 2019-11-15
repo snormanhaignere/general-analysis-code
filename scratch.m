@@ -1,3 +1,46 @@
+for cnt1 = [1 2 4 6 9]
+    wav(round((cnt1-1)*(0.25*sr)+1+sr*.1:(cnt1-1)*(0.25*sr)+sr*0.2),2) = 1;
+end
+
+
+I.a = 'TCI';
+I.b = [1,2,3];
+I.c = {'hello','world'};
+varargin = {'a', 'quilting', 'c', {'goodbye','world'}};
+[I, ~, C_value] = parse_optInputs_keyvalue(varargin, I);
+always_include = {'b'};
+always_exclude = {'a'};
+str = optInputs_to_string(I, C_value, always_include, always_exclude)
+
+
+%%
+
+clc;
+for i = 1:10
+    
+    xi = find(M.si == i,1);
+    fprintf('%s\n', M.all_subjid{i});
+    sum(~isnan(X(:,:,xi)))
+    
+end
+
+%%
+% information about the onset of stimuli in each run
+% NULL periods are removed
+root_directory = my_root_directory;
+exp = 'spectrotemporal-synthesis-ecog';
+subjid = 'AMC056';
+r = 1;
+para_file = [root_directory '/' exp '/data/para/' subjid '/r' num2str(r) '.par'];
+t = stim_timing_from_para(para_file);
+
+x = t.dur_in_sec(t.ids==0)
+x = x(x<5);
+min(x)
+max(x)
+
+
+%%
 clear S;
 S.a = '1';
 S.b = [2,3,4];
