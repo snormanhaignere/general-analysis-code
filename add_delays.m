@@ -21,21 +21,15 @@ F = reshape(F, F_dims(1), prod(F_dims(2:end)));
 n_delays = length(delays);
 n_tps = F_dims(1);
 F_shifted = I.pad_value * ones([F_dims(1), prod(F_dims(2:end)), n_delays]);
+original_tps = 1:n_tps;
 for i = 1:n_delays
     
-    % original time-points
-    original_tps = 1:n_tps;
-    
     % shifted time points
-    shifted_tps = (1:n_tps) + delays(i);
+    shifted_tps = original_tps + delays(i);
     
     % select valid time points
     xi = original_tps < 1 | original_tps > n_tps | shifted_tps < 1 | shifted_tps > n_tps;
-    original_tps = original_tps(~xi);
-    shifted_tps = shifted_tps(~xi);
-    clear xi;
-    
-    F_shifted( shifted_tps, :, i ) = F( original_tps, : );
+    F_shifted( shifted_tps(~xi), :, i ) = F( original_tps(~xi), : );
 
 end
 
