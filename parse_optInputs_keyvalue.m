@@ -1,4 +1,4 @@
-function [I, C, C_value] = parse_optInputs_keyvalue(optargs, I, varargin)
+function [I, C, C_value, all_keys] = parse_optInputs_keyvalue(optargs, I, varargin)
 
 % Parse optional inputs specified as a key-value pair. Key must be a string.
 % 
@@ -39,7 +39,9 @@ function [I, C, C_value] = parse_optInputs_keyvalue(optargs, I, varargin)
 % 2019-01-18: Added C_value, useful for creating strings of parameters that
 % have changed
 
+clear P;
 P.empty_means_unspecified = false;
+P.ignore_bad_keys = false;
 if ~isempty(varargin)
     P = parse_optInputs_keyvalue(varargin, P);
     if isempty(P.empty_means_unspecified)
@@ -76,6 +78,7 @@ C_value = struct;
 
 % immediately return if there are no optional arguments
 if n_optargs == 0
+    all_keys = {};
     return;
 end
 
@@ -85,6 +88,7 @@ i_val = 2:2:n_optargs;
 for j = 1:n_optargs/2
     key = optargs{i_key(j)};
     value = optargs{i_val(j)};
+    all_keys{j} = key;
 
     % check key is a string
     if ~ischar(key)
@@ -95,8 +99,12 @@ for j = 1:n_optargs/2
     % type
     if exist('possible_keys', 'var')
         if ~any(strcmp(key, possible_keys))
-            error(['Optional arguments not formatted propertly\n' ...
-                '''%s'' not a valid key\n'], key);
+            if P.ignore_bad_keys
+                continue;
+            else
+                error(['Optional arguments not formatted propertly\n' ...
+                    '''%s'' not a valid key\n'], key);
+            end
         end
         
         if ~isequal(class(I.(key)), class(value))

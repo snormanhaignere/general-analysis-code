@@ -1,3 +1,103 @@
+
+
+
+
+%%
+
+X = randn(100,1);
+X_phasescram = phasescram(X);
+figure;
+subplot(1,2,1);
+fftplot2(X,1);
+subplot(1,2,2);
+fftplot2(X_phasescram,1);
+
+
+
+%%
+
+clc;
+N = 1000;
+P = 10000;
+
+X = randn(N,P);
+Y = randn(N,P);
+
+xi = randi(N*P, 10);
+X(xi) = NaN;
+
+% tic;
+% r1 = fastcorr(X,Y);
+% toc;
+
+
+tic;
+r3 = nanfastcorr2(X,Y);
+toc;
+
+tic;
+r2 = nanfastcorr(X,Y);
+toc;
+
+
+% tic;
+% for i = 1:1000
+%     r2 = corr(X,Y);
+% end
+% toc;
+
+%%
+
+intper_sec = 0.1;
+delay_sec = 0.1;
+distr = 'gamma';
+shape_param_for_gamma = 10; % [1, inf], lower -> more exponential, higher -> more gaussian
+[h,t_sec,causal] = modelwin(distr, intper_sec, delay_sec, ...
+    'plot', true, 'shape', shape_param_for_gamma, 'sr', 1000);
+
+%%
+
+% close all;
+segdur_sec = 0.125;
+distr = 'gamma';
+intper_sec = 0.125;
+delay_sec = 0.1;
+shape = 1;
+[h_relpower, t_sec, h, causal] = win_power_ratio(...
+    segdur_sec, distr, intper_sec, delay_sec, ...
+    'shape', shape, 'plot', true, 'centralinterval', 0.75, 'delaypoint', 'median');
+
+%%
+clc;
+N = 1000;
+s = randn(N,1);
+w = rand(N,1)*5;
+x = s + randn(N,1).*w;
+y = s + randn(N,1).*w;
+1-normalized_squared_error(x,y)
+weighted_nse(x,y,ones(size(x)))
+weighted_nse(x,y,1./w)
+
+
+%%
+
+x = randn(100,1);
+y = randn(100,1);
+
+mx = mean(x);
+my = mean(y);
+
+vx = var(x);
+vy = var(y);
+
+cxy = cov([x,y]);
+
+r = cxy / sqrt(vx*vy)
+
+corr(x,y)
+
+
+%%
 for cnt1 = [1 2 4 6 9]
     wav(round((cnt1-1)*(0.25*sr)+1+sr*.1:(cnt1-1)*(0.25*sr)+sr*0.2),2) = 1;
 end

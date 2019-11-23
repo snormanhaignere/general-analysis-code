@@ -14,6 +14,7 @@ I.spearbrown = false;
 I.nperms = 0;
 I.chunksize = 0;
 I.removeNaNs = false;
+I.maxoverlap = NaN;
 I = parse_optInputs_keyvalue(varargin, I);
 
 % reliability per electrode
@@ -36,15 +37,37 @@ if I.nperms > 0
         % shuffle one-second chunks
         for j = 1:n_reps
             if I.chunksize == 0
-                D_perm(:,j,:) = D(randperm(n_stimuli),j,:);
+                if I.maxoverlap
+                    order_found = false;
+                    while ~order_found
+                        perm_order = randperm(n_stimuli);
+                        frac_overlap = mean(perm_order == (1:n_stimuli));
+                        order_found = frac_overlap < I.maxoverlap;
+                    end
+                else
+                    perm_order = randperm(n_stimuli);
+                end
+                D_perm(:,j,:) = D(perm_order,j,:);
             else
                 % divide into into chunks
                 n_chunks = ceil(n_smps/I.chunksize);
                 xi = reshape(1:(I.chunksize * n_chunks), I.chunksize, n_chunks);
                 xi(n_smps+1:end) = NaN;
                 
+                % permuted order
+                if I.maxoverlap
+                    order_found = false;
+                    while ~order_found
+                        perm_order = randperm(n_chunks);
+                        frac_overlap = mean(perm_order == (1:n_chunks));
+                        order_found = frac_overlap < I.maxoverlap;
+                    end
+                else
+                    perm_order = randperm(n_chunks);
+                end
+                
                 % permute chunks
-                xi = xi(:,randperm(n_chunks));
+                xi = xi(:,perm_order);
                 xi = xi(:);
                 xi(isnan(xi)) = [];
                 
@@ -59,9 +82,10 @@ if I.nperms > 0
         end
     end
     
+    
     [R.logP_gauss, R.z] = sig_via_null_gaussfit(R.corr, R.null);
     [R.logP_counts] = sig_via_null_counts(R.corr, R.null);
-    R.logP_gauss(isinf(R.logP_gauss)) = max(R.logP_gauss(~isinf(R.logP_gauss)));
+    % R.logP_gauss(isinf(R.logP_gauss)) = max(R.logP_gauss(~isinf(R.logP_gauss)));
         
 else
     

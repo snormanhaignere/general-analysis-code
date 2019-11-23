@@ -26,9 +26,21 @@ P.maxlen = 100;
 P.delimiter = '/';
 P = parse_optInputs_keyvalue(varargin, P);
 
+% check there is no overlap between fields to include and exclude
+overlapping_fields = intersect(always_include, always_exclude);
+if ~isempty(overlapping_fields)
+    str = '';
+    for i = 1:length(overlapping_fields)
+        str = [str, sprintf('%s\n',overlapping_fields{i})]; %#ok<AGROW>
+    end
+    error('The following fields are present in both always_include and always_exclude:\n%s', str);
+end
+
 % remove fields to always exclude from string
 for i = 1:length(always_exclude)
-    assert(isfield(I, always_exclude{i}));
+    if ~(isfield(I, always_exclude{i}))
+        error('%s cannot be excluded because it is not a possible field', always_include{i});
+    end
     I = rmfield(I, always_exclude{i});
     if isfield(C_value, always_exclude{i})
         C_value = rmfield(C_value, always_exclude{i});
@@ -39,7 +51,9 @@ end
 clear Z;
 Z = struct;
 for i = 1:length(always_include)
-    assert(isfield(I, always_include{i}));
+    if ~isfield(I, always_include{i})
+        error('%s cannot be always included because it is not a possible field', always_include{i});
+    end
     Z.(always_include{i}) = I.(always_include{i});
 end
 
