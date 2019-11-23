@@ -39,7 +39,7 @@ end
 % remove fields to always exclude from string
 for i = 1:length(always_exclude)
     if ~(isfield(I, always_exclude{i}))
-        error('%s cannot be excluded because it is not a possible field', always_include{i});
+        error('%s cannot be excluded because it is not a possible field', always_exclude{i});
     end
     I = rmfield(I, always_exclude{i});
     if isfield(C_value, always_exclude{i})
