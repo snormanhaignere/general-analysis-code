@@ -1,6 +1,70 @@
 
+%% Cross-context correlation
+
+root_directory = '/Users/svnh2/Desktop/projects';
+addpath([root_directory '/general-analysis-code']);
+addpath([root_directory '/export_fig_v3']);
+directory_to_save_results = [TCI_directory '/results-bstrap'];
+L = cross_context_corr(D, t, S, 'chnames', chnames, ...
+    'output_directory', directory_to_save_results, 'boundary', 'none', ...
+    'nbstraps', 10, 'bstraptype', 'segs');
+
+%%
+
+Ln = L;
+X = L.same_context(:,:,:,2:11);
+Ln.same_context_err = mean(bsxfun(@minus, X, mean(X,4)).^2,4);
+Ln.same_context = L.same_context(:,:,:,1);
+Ln.diff_context = L.diff_context(:,:,:,1);
+Ln.n_total_segs = Ln.n_total_segs(:,1);
 
 
+%%
+
+%% Model-fitting
+
+M = modelfit_cross_context_corr(Ln, 'overwrite', true, ...
+    'shape', 1, 'lossfn', 'unbiased-sqerr');
+
+%%
+
+
+hist(squeeze(L.same_context(5,1,1,2:11)));
+
+
+
+
+%%
+
+clc;
+N = 1000;
+s = randn(N,1);
+w = rand(N,1)*5;
+x = s + randn(N,1).*w;
+y = s + randn(N,1).*w;
+invW = 1./w;
+1-normalized_squared_error(x,y)
+weighted_nse(x,y,ones(size(x))/N)
+weighted_nse(x,y,invW/sum(invW))
+
+
+%%
+intper_sec = 1;
+delay_sec_start = [1,2,3];
+shape = 1;
+delaypoint = 'median';
+converted_delay_sec = modelwin_convert_delay(intper_sec, delay_sec_start, shape, delaypoint)
+
+figh = figure;
+hold on;
+for l = 1:length(delay_sec_start)
+    % show delay point
+    [h, t] = modelwin('gamma', intper_sec, delay_sec_start(l), 'shape', shape, 'delaypoint', 'start');
+    plot(t, h, 'LineWidth', 2);
+    yL = ylim;
+    lineh = plot([1,1]*converted_delay_sec(l), yL, 'r--', 'LineWidth', 2);
+    legend(lineh, delaypoint);
+end
 
 %%
 
@@ -49,23 +113,26 @@ toc;
 %%
 
 intper_sec = 0.1;
-delay_sec = 0.1;
+delay_sec_start = 0.1;
 distr = 'gamma';
 shape_param_for_gamma = 10; % [1, inf], lower -> more exponential, higher -> more gaussian
-[h,t_sec,causal] = modelwin(distr, intper_sec, delay_sec, ...
+[h,t_sec,causal] = modelwin(distr, intper_sec, delay_sec_start, ...
     'plot', true, 'shape', shape_param_for_gamma, 'sr', 1000);
 
 %%
 
 % close all;
-segdur_sec = 0.125;
+tic;
+segdur_sec = 0.01;
 distr = 'gamma';
-intper_sec = 0.125;
-delay_sec = 0.1;
+intper_sec = 0.01;
+delay_sec_start = 0.1;
 shape = 1;
 [h_relpower, t_sec, h, causal] = win_power_ratio(...
-    segdur_sec, distr, intper_sec, delay_sec, ...
-    'shape', shape, 'plot', true, 'centralinterval', 0.75, 'delaypoint', 'median');
+    segdur_sec, distr, intper_sec, delay_sec_start, ...
+    'shape', shape, 'plot', true, 'centralinterval', 0.75, ...
+    'delaypoint', 'median');
+toc;
 
 %%
 clc;

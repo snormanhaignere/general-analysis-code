@@ -15,6 +15,7 @@ I.tick = [];
 I.ticklabel = [];
 I.slopes = 1;
 I.intercepts = 0;
+I.markersize = 30;
 I.plot = true;
 I.figh = matlab.ui.Figure.empty;
 I.figdims = [];
@@ -68,7 +69,7 @@ if I.plot
     % plot the pairs of values
     n_pairs = size(pair_values,1);
     for i = 1:n_pairs
-        plot(pair_values(i,1), pair_values(i,2), 'k.', 'LineWidth', 2, 'MarkerSize', pair_counts(i).^(0.5)*30);
+        plot(pair_values(i,1), pair_values(i,2), 'k.', 'LineWidth', 2, 'MarkerSize', (pair_counts(i)).^(0.5)*I.markersize);
     end
     
     % axes, ticks
