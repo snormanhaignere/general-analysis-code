@@ -1,5 +1,9 @@
 function [I, C, C_value, allkeys, paramstring] = parse_optInputs_keyvalue_grouped(optargs, I, varargin)
 
+% Wrapper for parse_optInputs_keyvalue for sets of grouped parameters.
+% 
+% 2019-12-10: Created Sam NH
+
 clear P;
 P.empty_means_unspecified = false;
 P.always_include = {};
