@@ -19,7 +19,7 @@ P.maxlen = 100;
 P.delimiter = '';
 P.omit_field = {};
 P.include_fields = {};
-[P, C] = parse_optInputs_keyvalue(varargin, P);
+[P, C] = parse_optInputs_keyvalue(varargin, P, 'noloop');
 
 idstring = {''};
 

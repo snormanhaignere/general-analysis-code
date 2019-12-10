@@ -24,7 +24,7 @@ function str = optInputs_to_string(I, C_value, always_include, always_exclude, v
 
 P.maxlen = 100;
 P.delimiter = '/';
-P = parse_optInputs_keyvalue(varargin, P);
+P = parse_optInputs_keyvalue(varargin, P, 'noloop');
 
 % check there is no overlap between fields to include and exclude
 overlapping_fields = intersect(always_include, always_exclude);

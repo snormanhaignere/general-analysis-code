@@ -12,7 +12,7 @@ function s = mytostring(x, varargin)
 
 P.delimiter = '-';
 P.hashlen = NaN;
-P = parse_optInputs_keyvalue(varargin, P);
+P = parse_optInputs_keyvalue(varargin, P, 'noloop');
 
 if isempty(x)
     s = 'NULL';

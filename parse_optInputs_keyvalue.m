@@ -1,4 +1,4 @@
-function [I, C, C_value, all_keys] = parse_optInputs_keyvalue(optargs, I, varargin)
+function [I, C, C_value, all_keys, paramstring] = parse_optInputs_keyvalue(optargs, I, varargin)
 
 % Parse optional inputs specified as a key-value pair. Key must be a string.
 % 
@@ -42,10 +42,19 @@ function [I, C, C_value, all_keys] = parse_optInputs_keyvalue(optargs, I, vararg
 clear P;
 P.empty_means_unspecified = false;
 P.ignore_bad_keys = false;
+P.always_include = {};
+P.always_exclude = {};
+P.maxlen = 100;
+P.delimiter = '/';
+P.noloop = false;
 if ~isempty(varargin)
-    P = parse_optInputs_keyvalue(varargin, P);
-    if isempty(P.empty_means_unspecified)
-        P.empty_means_unspecified = false;
+    if strcmp(varargin{1}, 'noloop')
+        P.noloop = true;
+    else
+        P = parse_optInputs_keyvalue(varargin, P, 'noloop');
+        if isempty(P.empty_means_unspecified)
+            P.empty_means_unspecified = false;
+        end
     end
 end
 
@@ -63,8 +72,12 @@ else % extract list of possible keys from the values of I if specified
 end
 
 % check keys are not repeated
-if length(unique(optargs(1:2:n_optargs))) ~= length(optargs(1:2:n_optargs))
-    error('Duplicate keys');
+try
+    if length(unique(optargs(1:2:n_optargs))) ~= length(optargs(1:2:n_optargs))
+        error('Duplicate keys');
+    end
+catch
+    keyboard
 end
 
 % assume keys are not changed unless they are
@@ -85,7 +98,10 @@ end
 % assign keys and values
 i_key = 1:2:n_optargs;
 i_val = 2:2:n_optargs;
-for j = 1:n_optargs/2
+n_pairs = checkint(n_optargs/2);
+all_keys = cell(1, n_pairs);
+for j = 1:n_pairs
+    
     key = optargs{i_key(j)};
     value = optargs{i_val(j)};
     all_keys{j} = key;
@@ -140,6 +156,11 @@ for j = 1:n_optargs/2
             C_value.(key) = I.(key);
         end
     end
-    
 end
 
+if ~P.noloop
+    paramstring = optInputs_to_string(I, C_value, P.always_include, P.always_exclude, ...
+        'maxlen', P.maxlen, 'delimiter', P.delimiter);
+else
+    paramstring = '';
+end
