@@ -10,6 +10,7 @@ P.always_include = {};
 P.always_exclude = {};
 P.maxlen = 100;
 P.delimiter = '/';
+P.paramstring = false;
 P = parse_optInputs_keyvalue(varargin, P);
 C = cell(size(I));
 C_value = cell(size(I));
@@ -32,7 +33,7 @@ for i = 1:length(I)
         'always_include', always_include, ...
         'always_exclude', always_exclude, ...
         'empty_means_unspecified', P.empty_means_unspecified, ...
-        'maxlen', P.maxlen, 'delimiter', P.delimiter);
+        'maxlen', P.maxlen, 'delimiter', P.delimiter, 'paramstring', P.paramstring);
 end
 
 % check the keys map onto one of the parameters

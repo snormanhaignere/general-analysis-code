@@ -47,6 +47,7 @@ P.always_exclude = {};
 P.maxlen = 100;
 P.delimiter = '/';
 P.noloop = false;
+P.paramstring = false;
 if ~isempty(varargin)
     if strcmp(varargin{1}, 'noloop')
         P.noloop = true;
@@ -90,7 +91,7 @@ end
 C_value = struct;
 
 % immediately return if there are no optional arguments
-if n_optargs == 0
+if n_optargs == 0 && ~P.paramstring
     all_keys = {};
     return;
 end
@@ -158,7 +159,7 @@ for j = 1:n_pairs
     end
 end
 
-if ~P.noloop
+if P.paramstring && ~P.noloop
     paramstring = optInputs_to_string(I, C_value, P.always_include, P.always_exclude, ...
         'maxlen', P.maxlen, 'delimiter', P.delimiter);
 else
