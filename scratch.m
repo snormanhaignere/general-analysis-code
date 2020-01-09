@@ -1,3 +1,43 @@
+X = ones(2,3,4);
+X(2,1,3) = 0;
+[minX, ind, sub] = myminall(X);
+minX
+X(ind)
+X(sub{:})
+
+%%
+
+q = 2;
+p = 3;
+s = 4;
+figure;
+subplot(3,1,1);
+bounds = [MinAll(M.splits_loss(:,:,1,q,p,4)), MaxAll(M.splits_loss(:,:,1,q,p,s))]*1e4;
+imagesc(M.splits_loss(:,:,1,q,p,4)*1e4, bounds);
+colorbar;
+
+subplot(3,1,2);
+imagesc(M.splits_null_loss(:,:,1,q,p,s,1)*1e4, bounds);
+colorbar;
+
+subplot(3,1,3);
+imagesc(M.splits_null_loss(:,:,1,q,p,s,2)*1e4, bounds);
+colorbar;
+
+
+
+%%
+l = 1;
+d = M.splits_diff_context(:,l,2,2,1);
+p = M.splits_diff_context_bestpred(:,l,2,2,1);
+dn = squeeze(M.splits_null_diff_context(:,l,2,2,1,1:5));
+figure;
+plot(L.lag_t, dn)
+hold on;
+plot(L.lag_t, d, 'k-', 'LineWidth', 3)
+plot(L.lag_t, p, 'r-', 'LineWidth', 3)
+
+
 
 %% Cross-context correlation
 
