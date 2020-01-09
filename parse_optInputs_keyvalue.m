@@ -42,6 +42,7 @@ function [I, C, C_value, all_keys, paramstring] = parse_optInputs_keyvalue(optar
 clear P;
 P.empty_means_unspecified = false;
 P.ignore_bad_keys = false;
+P.ignore_mismatch_class = {};
 P.always_include = {};
 P.always_exclude = {};
 P.maxlen = 100;
@@ -124,7 +125,7 @@ for j = 1:n_pairs
             end
         end
         
-        if ~isequal(class(I.(key)), class(value))
+        if ~isequal(class(I.(key)), class(value)) && ~any(ismember(P.ignore_mismatch_class, key))
             allowed_class_swaps = {'double', 'int32'};
             allowed_swap = false;
             for k = 1:size(allowed_class_swaps,1)
