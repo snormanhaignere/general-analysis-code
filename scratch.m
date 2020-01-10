@@ -1,3 +1,8 @@
+
+
+
+%%
+
 X = ones(2,3,4);
 X(2,1,3) = 0;
 [minX, ind, sub] = myminall(X);
