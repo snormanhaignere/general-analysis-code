@@ -1,4 +1,4 @@
-function [U, W] = mcca(X, si, varargin)
+function [U, W] = mcca_legacy(X, si, varargin)
 
 clear I;
 I.keep = NaN;
