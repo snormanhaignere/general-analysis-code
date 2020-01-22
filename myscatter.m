@@ -55,7 +55,7 @@ if I.plot
     else
         figh = I.figh;
     end
-    clf(figh);
+    % clf(figh);
     if ~isempty(I.figdims)
         set(figh, 'Position', I.figdims);
     end
