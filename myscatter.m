@@ -16,10 +16,12 @@ I.ticklabel = [];
 I.slopes = 1;
 I.intercepts = 0;
 I.markersize = 30;
+I.linemarker = 'r--';
+I.color = [0 0 0];
 I.plot = true;
 I.figh = matlab.ui.Figure.empty;
 I.figdims = [];
-[I,C] = parse_optInputs_keyvalue(varargin, I, 'empty_means_unspecified', true);
+[I,C] = parse_optInputs_keyvalue(varargin, I);
 assert(length(I.slopes)==length(I.intercepts));
 
 % number of data points
@@ -63,13 +65,13 @@ if I.plot
     
     % plot background lines
     for i = 1:length(I.slopes)
-        plot(bounds, bounds*I.slopes(i) + I.intercepts(i), 'r--', 'LineWidth', 2); hold on;
+        plot(bounds, bounds*I.slopes(i) + I.intercepts(i), I.linemarker, 'LineWidth', 2); hold on;
     end
     
     % plot the pairs of values
     n_pairs = size(pair_values,1);
     for i = 1:n_pairs
-        plot(pair_values(i,1), pair_values(i,2), 'k.', 'LineWidth', 2, 'MarkerSize', (pair_counts(i)).^(0.5)*I.markersize);
+        plot(pair_values(i,1), pair_values(i,2), '.', 'LineWidth', 2, 'Color', I.color, 'MarkerSize', (pair_counts(i)).^(0.5)*I.markersize);
     end
     
     % axes, ticks

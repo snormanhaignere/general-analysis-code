@@ -3,6 +3,110 @@
 
 %%
 
+% stats for h
+mu_h = mean(h);
+hd = h - mu_h;
+s_h = sqrt(sum(hd.^2));
+hn = h/s_h;
+
+n_valid = N-M+1;
+r_xy = nan(n_valid, 1);
+r_pearson_true = nan(n_valid, 1);
+r_pearson_attempt = nan(n_valid, 1);
+mean_x = nan(n_valid, 1);
+std_x = nan(n_valid, 1);
+for i = 1:n_valid
+    xw = x((1:M)+i-1);
+    r_xy(i) = sum(xw .* h);
+    r_pearson_true(i) = corr(xw, h);
+    
+    mean_x(i) = mean(xw);
+    xd = xw - mean_x(i);
+    std_x(i) = sqrt(sum(xd.^2,1));
+    
+    xn = xd / std_x(i);
+    
+    r_pearson_attempt(i) = sum(xn .* hn);
+end
+
+% r_pearson_attempt
+
+%%
+
+ResetRandStream2(1)
+
+N = 100;
+x = randn(N,1);
+M = 10;
+h = randn(M,1);
+
+
+% stats for h
+mu_h = mean(h);
+hd = h - mu_h;
+s_h = sqrt(sum(hd.^2));
+hn = h/s_h;
+
+n_valid = N-M+1;
+r_xy = nan(n_valid, 1);
+r_pearson_true = nan(n_valid, 1);
+r_pearson_attempt = nan(n_valid, 1);
+mean_x = nan(n_valid, 1);
+std_x = nan(n_valid, 1);
+for i = 1:n_valid
+    xw = x((1:M)+i-1);
+    r_xy(i) = sum(xw .* h);
+    r_pearson_true(i) = corr(xw, h);
+    
+    mean_x(i) = mean(xw);
+    xd = xw - mean_x(i);
+    std_x(i) = sqrt(sum(xd.^2,1));
+    
+    xn = xd / std_x(i);
+    
+    r_pearson_attempt(i) = sum(xn .* hn);
+end
+
+%% Calculate mean of signal
+
+% means
+mu_x = xcorr_valid(x, ones(size(h))/length(h));
+mu_h = mean(h);
+
+% power
+p_x = xcorr_valid(x.^2, ones(size(h))/length(h));
+p_h = mean(h.^2);
+
+% un-normalized standard deviation
+s_x = sqrt(M*p_x - M*mu_x.^2);
+s_h = sqrt(M*p_h - M*mu_h.^2);
+
+% cross product
+r_xh = xcorr_valid(x, h);
+
+r_pearson_attempt2 = (1/s_h) * (1./s_x) .* (r_xh - M*mu_x*mu_h);
+
+plot([r_pearson_true, r_pearson_attempt2])
+
+
+
+
+
+%%
+
+
+
+
+
+%%
+
+cc = xcorr_valid(x, h);
+
+
+
+
+%%
+
 X = ones(2,3,4);
 X(2,1,3) = 0;
 [minX, ind, sub] = myminall(X);

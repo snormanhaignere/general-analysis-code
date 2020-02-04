@@ -19,7 +19,7 @@ if isempty(x)
 elseif ischar(x)
     s = x;
 elseif (isnumeric(x) || islogical(x)) && (isscalar(x) || isvector(x))
-    s = regexprep(num2str(x), '[ ]*', '-');
+    s = regexprep(num2str(x(:)'), '[ ]*', '-');
     if ~isnan(P.hashlen) && length(s) > P.hashlen
         s = DataHash(x);
     end

@@ -46,5 +46,3 @@ end
 
 % infer reconstruction weights
 W = pinv(U)*X;
-
-    
