@@ -32,7 +32,7 @@ A = randn(D,L); % generative matrix
 X = A*latent_values + sn*randn(D,L)*randn(L,N) + dn*randn(D,N);
 
 % solve
-[Z,W] = flda(X, labels, L);
+[Z,W,S,S_opt] = flda(X, labels, L);
 Z_opt = pinv(A) * X;
 [~,~,V] = svd(X,'econ');
 
