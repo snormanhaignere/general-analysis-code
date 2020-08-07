@@ -1,4 +1,4 @@
-function Y = resample_and_window(X, orig_win, orig_sr, targ_win, targ_sr)
+function Y = resample_and_window(X, orig_win, orig_sr, targ_win, targ_sr, varargin)
 
 % Resamples a signal X, sampled within a given time window (orig_win(1) -
 % orig_win(2)) at a given sampling rate (orig_sr) to a new target window
@@ -32,6 +32,10 @@ function Y = resample_and_window(X, orig_win, orig_sr, targ_win, targ_sr)
 %
 % 2017-06-06: Created, Sam NH
 
+clear I;
+I.resamp_fac = 1;
+I = parse_optInputs_keyvalue(varargin, I);
+
 % unwrap all but first dimension
 X_dims = size(X);
 X = reshape(X, X_dims(1), prod(X_dims(2:end)));
@@ -45,13 +49,9 @@ assert(yi(1) >= xi(1) && yi(end) <= xi(end));
 Y = nan([length(yi), size(X,2)]);
 
 % interpolate columns without NaN
-try
-    no_NaNs = all(~isnan(X));
-    if sum(no_NaNs)>0
-        Y(:,no_NaNs) = interp1(xi', X(:,no_NaNs), yi', 'pchip');
-    end
-catch
-    keyboard
+no_NaNs = all(~isnan(X));
+if sum(no_NaNs)>0
+    Y(:,no_NaNs) = interp1(xi', X(:,no_NaNs), yi', 'pchip');
 end
 
 % interpolate columns with NaNs
@@ -64,7 +64,7 @@ end
 assert(all(all(~isnan(Y)) | all(isnan(Y))));
 
 % resample
-Y = resample_ndarray(Y, targ_sr, orig_sr);
+Y = resample_ndarray(Y, targ_sr, orig_sr, 1, I.resamp_fac);
 
 % reshape to nd-array
 Y = reshape(Y, [size(Y,1), X_dims(2:end)]);

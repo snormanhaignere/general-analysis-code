@@ -1,4 +1,4 @@
-function X = resample_ndarray(X, new_sr, old_sr, DIM)
+function X = resample_ndarray(X, new_sr, old_sr, DIM, resamp_fac)
 % Wrapper function for the resample function that works for nd-arrays operating over the first
 % dimension.
 % 
@@ -8,12 +8,16 @@ if nargin < 4
     DIM = 1;
 end
 
+if nargin < 5
+    resamp_fac = 1;
+end
+
 % permute chosen dimsnion to front;
 perm_order = [DIM, setdiff(1:ndims(X), DIM)];
 X = permute(X, perm_order);
 
 % resample
-X = resamp_first_dim(X, new_sr, old_sr);
+X = resamp_first_dim(X, new_sr*resamp_fac, old_sr*resamp_fac);
 
 % permute back
 X = ipermute(X, perm_order);

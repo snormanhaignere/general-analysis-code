@@ -23,7 +23,7 @@ h = h/sum(h);
 
 dims = size(Y);
 Y = reshape(Y, dims(1), prod(dims(2:end)));
-Ysmooth = myconv(Y, h, 'causal', I.causal);
+Ysmooth = real(myconv(Y, h, 'causal', I.causal));
 % Ysmooth = nan(size(Y));
 % for i = 1:prod(dims(2:end))
 %     if ~any(isnan(Y(:,i)))

@@ -1,4 +1,4 @@
-function [pair_values, pair_counts, bounds, figh] = myscatter(X, varargin)
+function [pair_values, pair_counts, bounds, figh, h] = myscatter(X, varargin)
 
 % Custom script for scatter plotting. One key difference is that if a pair
 % of values is repeated this plot produces a larger marker indicating the
@@ -17,6 +17,7 @@ I.slopes = 1;
 I.intercepts = 0;
 I.markersize = 30;
 I.linemarker = 'r--';
+I.marker = '.';
 I.color = [0 0 0];
 I.plot = true;
 I.figh = matlab.ui.Figure.empty;
@@ -70,8 +71,9 @@ if I.plot
     
     % plot the pairs of values
     n_pairs = size(pair_values,1);
+    h = nan(n_pairs,1);
     for i = 1:n_pairs
-        plot(pair_values(i,1), pair_values(i,2), '.', 'LineWidth', 2, 'Color', I.color, 'MarkerSize', (pair_counts(i)).^(0.5)*I.markersize);
+        h(i) = plot(pair_values(i,1), pair_values(i,2), I.marker, 'LineWidth', 2, 'Color', I.color, 'MarkerSize', (pair_counts(i)).^(0.5)*I.markersize);
     end
     
     % axes, ticks

@@ -25,7 +25,7 @@ function [Matching,Cost] = Hungarian(Perf)
   % Find the number in each column that are connected
     num_y = sum(~isinf(Perf),1);
   % Find the number in each row that are connected
-    num_x = sum(~isinf(Perf),2);
+    num_x = sum(~isinf(Perf),2); 
     
   % Find the columns(vertices) and rows(vertices) that are isolated
     x_con = find(num_x~=0);

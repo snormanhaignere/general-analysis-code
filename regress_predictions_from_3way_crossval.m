@@ -138,6 +138,8 @@ Yh = nan(n_samples, n_data_vecs);
 if nargout >=5; B = nan(n_features+1, n_data_vecs, n_folds); end
 for test_fold = 1:n_folds
     
+    fprintf('test fold %d\n', test_fold); drawnow;
+    
     % train and testing folds
     test_samples = test_fold_indices == test_fold;
     

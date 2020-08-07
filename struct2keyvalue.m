@@ -14,7 +14,7 @@ function keyvalue_pairs = struct2keyvalue(S, varargin)
 
 I.omit_fields = {};
 I = parse_optInputs_keyvalue(varargin, I);
-f = setdiff(fieldnames(S), I.omit_fields);
+f = setdiff(fieldnames(S), I.omit_fields, 'stable');
 n_keyvalue_pairs = length(f);
 keyvalue_pairs = cell(1, n_keyvalue_pairs*2);
 for i = 1:n_keyvalue_pairs

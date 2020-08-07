@@ -161,6 +161,9 @@ for j = 1:n_pairs
     end
 end
 
+% reorder fiels to match original structure
+C_value = orderfields(C_value, intersect(fieldnames(I), fieldnames(C_value), 'stable'));
+
 if P.paramstring && ~P.noloop
     paramstring = optInputs_to_string(I, C_value, P.always_include, P.always_exclude, ...
         'maxlen', P.maxlen, 'delimiter', P.delimiter);

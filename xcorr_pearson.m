@@ -46,8 +46,12 @@ p_x = xcorr_valid(x.^2, ones(size(h))/M);
 p_h = mean(h.^2);
 
 % un-normalized standard deviation
-s_x = sqrt(M*p_x - M*mu_x.^2);
-s_h = sqrt(M*p_h - M*mu_h.^2);
+s_x = M*p_x - M*mu_x.^2;
+s_x(s_x<0) = 1;
+s_x = sqrt(s_x);
+s_h = M*p_h - M*mu_h.^2; 
+s_h(s_h<0) = 0;
+s_h = sqrt(s_h);
 
 % cross product
 r_xh = xcorr_valid(x, h);

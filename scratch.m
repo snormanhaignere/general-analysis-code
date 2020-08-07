@@ -1,5 +1,48 @@
 
 
+%%
+
+X = rand(10,4);
+K = 4;
+
+% [N,~] = size(X);
+% 
+% % calculate and remove mean
+% mu = nanmean(X,1);
+% Xd = bsxfun(@minus, X, mu);
+
+% perform ppca analysis
+opt = statset('ppca');
+[Vp,USp] = ppca(X,K,'Options',opt);
+
+
+%%
+% incorporate mean
+% recon USp_ones * Vp_mean'
+% USp_ones = [ones(N,1), USp];
+% Vp_mean = [mu', Vp];
+
+USp_ones = [ones(N,1)];
+Vp_mean = [mu'];
+
+
+USp_ones * Vp_mean'
+mean(X)
+
+
+%%
+intper_sec = 1;
+delay_sec_start = 0;
+shape = 2;
+delaypoint = 'median';
+converted_intper_sec = modelwin_convert_intper(intper_sec, shape, 0.75, 0.9)
+
+% % plot delay point
+% [h, t] = modelwin('gamma', intper_sec, delay_sec_start, 'shape', shape, 'delaypoint', 'start');
+% plot(t, h, 'LineWidth', 2);
+% hold on;
+% [h, t] = modelwin('gamma', converted_intper_sec, delay_sec_start, 'shape', shape, 'delaypoint', 'start');
+% plot(t, h, 'LineWidth', 2);
 
 %%
 

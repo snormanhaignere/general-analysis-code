@@ -1,7 +1,7 @@
 function pinvX = pinv_wls(X,sig,orientation)
 % function pinvX = pinv_wls(X,Y)
 % 
-% Returns a matrix similar to the pseudoinverse, useful for weighted-least-squares regression
+% Returns a matrix similar tclo the pseudoinverse, useful for weighted-least-squares regression
 % X is a [M x L] regression matrix.
 % If M >= L, sig is a [M x 1] vector of errors in units of standard deviation.
 % If L > 1, sig is a [L x 1] vector of errors.

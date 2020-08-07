@@ -37,7 +37,7 @@ custom_color_maps = {...
 switch cname
     case custom_color_maps
         load(['colormap-custom-' cname '.mat'], 'cmap');
-    case {'parula', 'jet'}
+    case {'parula', 'jet', 'gray', 'autumn', 'summer'}
         cmap = colormap(cname);
     case {'plasma'}
         cmap = plasma;
@@ -63,6 +63,10 @@ switch cname
         cmap = cbrewer('seq', 'YlOrRd', 128, 'pchip');
     case {'cbrewer-seq-blues'}
         cmap = cbrewer('seq', 'Blues', 128, 'pchip');
+    case {'cbrewer-set1'}
+        cmap = cbrewer('qual', 'Set1', 9, 'pchip');
+    case {'cbrewer-paired'}
+        cmap = cbrewer('qual', 'Paired', 12, 'pchip');
     otherwise
         error('No matching colormap');
 end

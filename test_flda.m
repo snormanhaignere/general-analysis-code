@@ -18,7 +18,7 @@ labels = repmat(1:C,1,ceil(N/C));
 labels = labels(1:N);
 
 % sample class means
-class_means = randn(L, C);
+class_means = randn(L, C)+3;
 
 % sample latent values given class means
 latent_values = nan(L, N);
@@ -32,7 +32,7 @@ A = randn(D,L); % generative matrix
 X = A*latent_values + sn*randn(D,L)*randn(L,N) + dn*randn(D,N);
 
 % solve
-[Z,W,S,S_opt] = flda(X, labels, L);
+[Z,W,S,S_opt] = flda(X, labels, L, 'demean', true);
 Z_opt = pinv(A) * X;
 [~,~,V] = svd(X,'econ');
 

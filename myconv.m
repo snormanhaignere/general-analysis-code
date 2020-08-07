@@ -30,6 +30,8 @@ function y = myconv(sig, h, varargin)
 % myconv(sig, h, 'causal', false) is equivalent to conv(sig, h, 'same')
 % 
 % 2016-09-25: Created, Sam NH
+% 
+% 2020-06-17: Fixed a major bug (fft was fft2!)
 
 %% Optional arguments
 
@@ -67,7 +69,7 @@ end
 %% Convolution and normalization
     
 % convolve in the frequency domain
-y = ifft2(fft2(sig_pad) .* (fft2(h_pad) * ones(1,size(sig_pad,2))));
+y = ifft(fft(sig_pad) .* (fft(h_pad) * ones(1,size(sig_pad,2))));
 
 % remove padded segments
 y = y(size(h,1)+1:end,:);
